@@ -47,7 +47,6 @@ class ParkPlanner:
 
         # 當回到起點 V1，且路徑長度大於 1 時，進行最佳解檢查
         if curr == 'V1' and len(path) > 1:
-            # 💡 修正：如果整趟路線一個設施都沒玩到（rides_count == 0），視為無效行程，直接拒絕！
             if len(visited_rides) == 0:
                 return
                 
@@ -82,8 +81,6 @@ class ParkPlanner:
 
             # 分支二：選擇「只經過、不遊玩」（或回到起點 V1）
             if path.count(neighbor) < 2:
-                # 🌟 關鍵防呆限制：如果這個設施還沒被玩過（不在 visited_rides 裡面），且它不是起點 V1
-                # 那就絕對不能「只路過不玩」，必須強制跳過這個分支（不執行 _dfs）
                 if neighbor != 'V1' and (neighbor not in visited_rides):
                     pass  # 沒玩過就不能純路過，直接不建立這個分支
                 else:
