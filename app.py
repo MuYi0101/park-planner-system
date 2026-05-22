@@ -76,7 +76,7 @@ class ParkPlanner:
                 visited_rides.remove(neighbor)
 
             if path.count(neighbor) < 2:
-                self._dfs(neighbor, t + edge_t, c, e, s + edge_s,  # 這裡的 e 沒變，代表路過完全不花體力！
+                self._dfs(neighbor, t + edge_t, c, e, s + edge_s, 
                           path + [neighbor], visited_rides, pref, 
                           max_t, max_c, max_e, max_s)
 
