@@ -80,10 +80,17 @@ class ParkPlanner:
                           max_t, max_c, max_e, max_s)
                 visited_rides.remove(neighbor)
 
+            # 分支二：選擇「只經過、不遊玩」（或回到起點 V1）
             if path.count(neighbor) < 2:
-                self._dfs(neighbor, t + edge_t, c, e, s + edge_s, 
-                          path + [neighbor], visited_rides, pref, 
-                          max_t, max_c, max_e, max_s)
+                # 🌟 關鍵防呆限制：如果這個設施還沒被玩過（不在 visited_rides 裡面），且它不是起點 V1
+                # 那就絕對不能「只路過不玩」，必須強制跳過這個分支（不執行 _dfs）
+                if neighbor != 'V1' and (neighbor not in visited_rides):
+                    pass  # 沒玩過就不能純路過，直接不建立這個分支
+                else:
+                    # 只有「已經玩過該設施」或「要回起點 V1」時，才允許純路過
+                    self._dfs(neighbor, t + edge_t, c, e, s + edge_s, 
+                              path + [neighbor], visited_rides, pref, 
+                              max_t, max_c, max_e, max_s)
 
 # ==========================================
 # 3. Streamlit 網頁使用者介面 (UI)
