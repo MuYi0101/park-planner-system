@@ -45,7 +45,12 @@ class ParkPlanner:
         if len(visited_rides) + remaining_rides < self.best_metrics[0]:
             return
 
+        # 當回到起點 V1，且路徑長度大於 1 時，進行最佳解檢查
         if curr == 'V1' and len(path) > 1:
+            # 💡 修正：如果整趟路線一個設施都沒玩到（rides_count == 0），視為無效行程，直接拒絕！
+            if len(visited_rides) == 0:
+                return
+                
             current_metrics = [len(visited_rides), pref, -t, -c, -s]
             if current_metrics > self.best_metrics:
                 self.best_metrics = current_metrics
