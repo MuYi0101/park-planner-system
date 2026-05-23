@@ -1,6 +1,9 @@
 import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import requests
+import os
 
 # ==========================================
 # 1. 定義地圖資料模型 (Data Model)
@@ -167,11 +170,7 @@ if st.sidebar.button("開始計算最佳路線"):
         
         # 3. 找出推薦路線經過的邊
         path_edges = list(zip(recommended_path, recommended_path[1:]))
-
-        import matplotlib.font_manager as fm
-        import requests
-        import os
-        
+ 
         # 🌟 解決中文字型變成方塊的終極黑魔法
         @st.cache_data # 使用 Streamlit 快取，避免每次點擊按鈕都要重新下載
         def load_chinese_font():
