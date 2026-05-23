@@ -314,18 +314,32 @@ if st.sidebar.button("開始計算最佳路線"):
         recommended_path = result['path']
         path_edges = list(zip(recommended_path, recommended_path[1:]))
         
-        nx.draw_networkx_edges(
-            G,
-            pos,
-            edgelist=path_edges,
-            edge_color='red',
-            width=4,
-            arrows=True,
-            arrowstyle='-|>',
-            arrowsize=25,
-            connectionstyle='arc3,rad=0.05',
-            ax=ax
-        )
+        from matplotlib.patches import FancyArrowPatch
+
+        # ==========================================
+        # 畫推薦路線（真正的箭頭）
+        # ==========================================
+        
+        for start, end in path_edges:
+        
+            x1, y1 = pos[start]
+            x2, y2 = pos[end]
+        
+            arrow = FancyArrowPatch(
+                (x1, y1),
+                (x2, y2),
+        
+                arrowstyle='->',
+                mutation_scale=20,
+        
+                color='red',
+                linewidth=4,
+        
+                shrinkA=25,
+                shrinkB=25
+            )
+        
+            ax.add_patch(arrow)
         
         # ==========================================
         # 美化
