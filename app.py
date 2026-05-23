@@ -92,7 +92,7 @@ class ParkPlanner:
                     'total_preference': pref,
                     'rides_count': len(visited_rides)
                 }
-                history_entry['狀態/結果'] = "🌟 找到更佳可行解！"
+                history_entry['狀態/結果'] = "找到更佳可行解！"
             else:
                 history_entry['狀態/結果'] = "完成環路 (未超越目前最佳解)"
             
@@ -139,9 +139,9 @@ st.title("演算法概論：主題樂園最佳遊園計畫系統 (第八組)")
 
 # 側邊欄：輸入條件
 st.sidebar.header("請輸入您的遊園限制")
-max_time = st.sidebar.slider("時間上限 (分鐘)", 0, 600, 350)
-max_cost = st.sidebar.slider("預算上限 (新台幣)", 0, 500, 250)
-max_energy = st.sidebar.slider("體力上限 (1-20)", 1, 20, 12)
+max_time = st.sidebar.slider("時間上限 (分鐘)", 0, 600, 70)
+max_cost = st.sidebar.slider("預算上限 (新台幣)", 0, 500, 300)
+max_energy = st.sidebar.slider("體力上限 (1-20)", 1, 20, 10)
 max_sun = st.sidebar.slider("可接受曝曬指數上限", 1, 30, 15)
 
 st.sidebar.markdown("---")
