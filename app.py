@@ -327,18 +327,23 @@ if st.sidebar.button("開始計算最佳路線"):
         from matplotlib.patches import FancyArrowPatch
         import numpy as np
         
-        def offset_vector(x1, y1, x2, y2, offset):
-            dx = x2 - x1
-            dy = y2 - y1
-            length = np.sqrt(dx*dx + dy*dy)
+        def offset_vector(x1, y1, x2, y2, offset, base_start, base_end, pos):
+            # 永遠用固定順序（例如節點編號小的到大的）來計算垂直向量的方向
+            bx1, by1 = pos[base_start]
+            bx2, by2 = pos[base_end]
+            
+            bdx = bx2 - bx1
+            bdy = by2 - by1
+            length = np.sqrt(bdx*bdx + bdy*bdy)
         
             if length == 0:
                 return x1, y1, x2, y2
         
-            # 垂直單位向量
-            nx = -dy / length
-            ny = dx / length
+            # 固定基準的垂直單位向量
+            nx = -bdy / length
+            ny = bdx / length
         
+            # 對「當前實際的起終點」進行相同方向的偏移
             return (
                 x1 + nx * offset,
                 y1 + ny * offset,
@@ -346,26 +351,29 @@ if st.sidebar.button("開始計算最佳路線"):
                 y2 + ny * offset
             )
         
-        for start, end in path_edges:
+        drawn_pairs = set()
         
+        for start, end in path_edges:
             x1, y1 = pos[start]
             x2, y2 = pos[end]
         
-            # 🔥 核心：方向決定正負
-            if (start, end) in path_edges:
-                direction_key = f"{start}->{end}"
-            else:
-                direction_key = f"{end}->{start}"
+            # 排序抓出基準節點（不論去回，base_start 和 base_end 永遠固定）
+            base_start, base_end = sorted([start, end])
+            pair = (base_start, base_end)
         
-            # 👉 直接用 node 名字決定方向（避免重複判斷錯誤）
-            if list(path_edges).index((start, end)) % 2 == 0:
-                offset = 0.12
-                color = 'red'
-            else:
-                offset = -0.12
+            # 判斷方向
+            if pair in drawn_pairs:
+                # 回程
+                offset = -0.12  # 往基準向量的相反方向偏
                 color = 'blue'
+            else:
+                # 去程
+                offset = 0.12   # 往基準向量的相同方向偏
+                color = 'red'
+                drawn_pairs.add(pair)
         
-            x1, y1, x2, y2 = offset_vector(x1, y1, x2, y2, offset)
+            # 傳入 base_start 和 base_end 來固定垂直向量方向
+            x1, y1, x2, y2 = offset_vector(x1, y1, x2, y2, offset, base_start, base_end, pos)
         
             arrow = FancyArrowPatch(
                 (x1, y1),
