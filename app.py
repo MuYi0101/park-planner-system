@@ -276,13 +276,7 @@ if st.sidebar.button("開始計算最佳路線"):
         
         recommended_path = result['path']
         path_edges = list(zip(recommended_path, recommended_path[1:])) # 🌟 確保這一行有加上！
-        
-        drawn_pairs = set()
-        for start, end in path_edges:  # 這樣第 274 行就不會再報 NameError 了
-            x1, y1, x2, y2 = pos[start][0], pos[start][1], pos[end][0], pos[end][1]
-            base_start, base_end = sorted([start, end])
-            pair = (base_start, base_end)
-            
+
         drawn_pairs = set()
         for start, end in path_edges:
             x1, y1, x2, y2 = pos[start][0], pos[start][1], pos[end][0], pos[end][1]
