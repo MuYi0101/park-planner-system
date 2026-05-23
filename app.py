@@ -63,7 +63,6 @@ class ParkPlanner:
                     'total_sun': s,
                     'total_preference': pref,
                     'rides_count': len(visited_rides)
-                    'visited_set': set(visited_rides)  # 🌟 多加這行，把當前玩過的集合存起來
                 }
             return
 
@@ -155,14 +154,15 @@ if st.sidebar.button("開始計算最佳路線"):
         recommended_path = result['path']
         unique_nodes = set(recommended_path)
         
+        # 💡 修正後的正確程式碼：直接用 node != 'V1' 來判斷是否為去玩的設施
         for node in unique_nodes:
             folium.Marker(
                 location=location_gps[node],
                 popup=names[node],
                 tooltip=names[node],
-                # 這樣 result['visited_set'] 就存在了，不會再噴 KeyError
-                icon=folium.Icon(color='red' if node in result['visited_set'] else 'blue', icon='info-sign')
-            )
+                # 只要不是入口廣場(V1)，代表該設施就一定有進去玩，顯示紅色；入口 V1 顯示藍色
+                icon=folium.Icon(color='red' if node != 'V1' else 'blue', icon='info-sign')
+            ).add_to(m)  # 註：記得後面要加上 .add_to(m) 喔！
         
         # 4. 用紅線把推薦路線依序連起來 (畫出軌跡)
         route_gps = [location_gps[node] for node in recommended_path]
