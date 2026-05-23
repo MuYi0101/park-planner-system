@@ -92,7 +92,7 @@ class ParkPlanner:
                     'total_preference': pref,
                     'rides_count': len(visited_rides)
                 }
-                history_entry['狀態/結果'] = "找到更佳可行解！"
+                history_entry['狀態/結果'] = "🌟 找到更佳可行解！"
             else:
                 history_entry['狀態/結果'] = "完成環路 (未超越目前最佳解)"
             
