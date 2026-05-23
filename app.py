@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import matplotlib.font_manager as fm
 import requests
 import os
+import time  # 引入時間模組來控制網頁更新頻率
 
 # ==========================================
 # 1. 定義地圖資料模型 (Data Model)
@@ -27,32 +28,94 @@ graph = {
 }
 
 # ==========================================
-# 2. 核心搜尋演算法 (你的核心 Code)
+# 2. 核心搜尋演算法 (加入網頁動態監控)
 # ==========================================
 class ParkPlanner:
-    def __init__(self, vertices, graph):
+    def __init__(self, vertices, graph, status_placeholder=None, log_placeholder=None):
         self.vertices = vertices
         self.graph = graph
         self.best_solution = None
         self.best_metrics = [-1, -1, float('-inf'), float('-inf'), float('-inf')]
+        
+        # Streamlit 顯示元件
+        self.status_placeholder = status_placeholder
+        self.log_placeholder = log_placeholder
+        self.total_states_explored = 0
+        self.prune_count = 0
+        self.last_update_time = time.time()
+        self.recent_logs = []
 
     def solve(self, max_time, max_cost, max_energy, max_sun):
         self.best_solution = None
         self.best_metrics = [-1, -1, float('-inf'), float('-inf'), float('-inf')]
+        self.total_states_explored = 0
+        self.prune_count = 0
+        self.recent_logs = ["🚀 開始進行深度優先搜尋 (DFS)..."]
+        
         self._dfs('V1', 0, 0, 0, 0, ['V1'], set(), 0, max_time, max_cost, max_energy, max_sun)
+        
+        # 搜尋結束後更新最後狀態
+        if self.status_placeholder:
+            self.status_placeholder.markdown(
+                f"📊 **搜尋結束統計**：總共探索了 `{self.total_states_explored}` 個狀態，"
+                f"成功剪枝 `{self.prune_count}` 次。"
+            )
         return self.best_solution
 
+    def _update_ui(self, current_path, message, is_pruned=False):
+        """輔助函式：用來控制 Streamlit 介面的動態重新渲染"""
+        self.total_states_explored += 1
+        if is_pruned:
+            self.prune_count += 1
+            
+        # 限制每 0.05 秒才更新一次網頁，避免 Streamlit 頻繁重繪導致網頁凍結
+        current_time = time.time()
+        if current_time - self.last_update_time > 0.05:
+            path_str = " ➔ ".join(current_path)
+            
+            # 更新狀態列
+            if self.status_placeholder:
+                self.status_placeholder.markdown(
+                    f"🔄 **當前搜尋狀態**：已探索 `{self.total_states_explored}` 個節點 | "
+                    f"已剪枝次數：`{self.prune_count}` 次\n\n"
+                    f"📍 **當前嘗試路徑**：`{path_str}`"
+                )
+            
+            # 更新即時日誌紀錄 (只保留最近 5 條)
+            if self.log_placeholder:
+                log_style = "🔴 [剪枝] " if is_pruned else "🟢 [探索] "
+                self.recent_logs.append(f"{log_style}路徑: {path_str} ({message})")
+                if len(self.recent_logs) > 5:
+                    self.recent_logs.pop(0)
+                
+                # 組合文字輸出
+                log_text = "\n".join([f"- {log}" for log in self.recent_logs])
+                self.log_placeholder.markdown(log_text)
+                
+            self.last_update_time = current_time
+
     def _dfs(self, curr, t, c, e, s, path, visited_rides, pref, max_t, max_c, max_e, max_s):
+        # 條件 1：超出資源限制 -> 剪枝
         if t > max_t or c > max_c or e > max_e or s > max_s:
+            reason = []
+            if t > max_t: reason.append(f"時間超限({t}>{max_t})")
+            if c > max_c: reason.append(f"預算超限({c}>{max_c})")
+            if e > max_e: reason.append(f"體力超限({e}>{max_e})")
+            if s > max_s: reason.append(f"曝曬超限({s}>{max_s})")
+            self._update_ui(path, ", ".join(reason), is_pruned=True)
             return
-        
+            
+        # 條件 2：剩餘能玩的設施加起來也無法超越目前最佳解 -> 剪枝
         remaining_rides = len(self.vertices) - 1 - len(visited_rides)
         if len(visited_rides) + remaining_rides < self.best_metrics[0]:
+            self._update_ui(path, "潛在遊玩數量無法超越當前最佳解", is_pruned=True)
             return
+
+        # 動態通知目前探索點
+        self._update_ui(path, f"抵達 {self.vertices[curr]['name']}")
 
         # 當回到起點 V1，且路徑長度大於 1 時，進行最佳解檢查
         if curr == 'V1' and len(path) > 1:
-            # 💡 修正：如果整趟路線一個設施都沒玩到（rides_count == 0），視為無效行程，直接拒絕！
             if len(visited_rides) == 0:
                 return
                 
@@ -87,12 +150,9 @@ class ParkPlanner:
 
             # 分支二：選擇「只經過、不遊玩」（或回到起點 V1）
             if path.count(neighbor) < 2:
-                # 🌟 關鍵防呆限制：如果這個設施還沒被玩過（不在 visited_rides 裡面），且它不是起點 V1
-                # 那就絕對不能「只路過不玩」，必須強制跳過這個分支（不執行 _dfs）
                 if neighbor != 'V1' and (neighbor not in visited_rides):
                     pass  # 沒玩過就不能純路過，直接不建立這個分支
                 else:
-                    # 只有「已經玩過該設施」或「要回起點 V1」時，才允許純路過
                     self._dfs(neighbor, t + edge_t, c, e, s + edge_s, 
                               path + [neighbor], visited_rides, pref, 
                               max_t, max_c, max_e, max_s)
@@ -111,8 +171,21 @@ max_energy = st.sidebar.slider("體力上限 (1-20)", 1, 20, 12)
 max_sun = st.sidebar.slider("可接受曝曬指數上限", 1, 30, 15)
 
 st.sidebar.markdown("---")
+
 if st.sidebar.button("開始計算最佳路線"):
-    planner = ParkPlanner(vertices, graph)
+    
+    st.subheader("🕵️ 演算法即時計算過程")
+    # 建立兩個 Streamlit 的空容器，用來動態刷新內容
+    status_box = st.empty()
+    
+    # 用 st.expander 把詳細的動態日誌收納起來，介面比較整潔
+    with st.expander("查看即時搜尋日誌與剪枝動作", expanded=True):
+        log_box = st.empty()
+        
+    # 初始化 Planner 並帶入 UI 容器
+    planner = ParkPlanner(vertices, graph, status_placeholder=status_box, log_placeholder=log_box)
+    
+    # 執行 solve (執行期間網頁會動態刷新)
     result = planner.solve(max_time, max_cost, max_energy, max_sun)
     
     if result:
@@ -139,7 +212,7 @@ if st.sidebar.button("開始計算最佳路線"):
         
         st.subheader("推薦遊園路線圖")
         
-        # 1. 建立圖形結構 (對照表2的聯通關係)
+        # 1. 建立圖形結構
         G = nx.Graph()
         edges = [
             ('V1', 'V2'), ('V1', 'V3'), ('V2', 'V3'), ('V2', 'V4'),
@@ -147,67 +220,37 @@ if st.sidebar.button("開始計算最佳路線"):
         ]
         G.add_edges_from(edges)
         
-        # 2. 固定節點在網頁上的擺放位置 (完美對齊報告圖 image_bdca24.png 的視覺位置)
-        # 比例尺與相對位置均依據：V1在最左，V2在中上，V3在右上，V4在中下，V5在右下，V6在最右
         pos = {
-            'V1': (0.0,  0.0),   # 入口廣場 (最左邊中心)
-            'V2': (1.5,  1.5),   # 雲霄飛車 (中偏上)
-            'V3': (3.0,  0.8),   # 摩天輪   (右偏上)
-            'V4': (1.5, -1.5),   # 鬼屋     (中偏下)
-            'V5': (3.5, -2.0),   # 漂漂河   (右偏下)
-            'V6': (5.0, -0.2)    # 旋轉木馬 (最右邊中心)
+            'V1': (0.0,  0.0),  
+            'V2': (1.5,  1.5),  
+            'V3': (3.0,  0.8),  
+            'V4': (1.5, -1.5),  
+            'V5': (3.5, -2.0),  
+            'V6': (5.0, -0.2)   
         }
         
-        # 設施名稱對照表 (讓地圖上直接顯示中文名稱而非單純的 V1、V2)
-        labels = {
-            'V1': '入口廣場\n(V1)',
-            'V2': '雲霄飛車\n(V2)',
-            'V3': '摩天輪\n(V3)',
-            'V4': '鬼屋\n(V4)',
-            'V5': '漂漂河\n(V5)',
-            'V6': '旋轉木馬\n(V6)'
-        }
-        
-        # 3. 找出推薦路線經過的邊
-        path_edges = list(zip(recommended_path, recommended_path[1:]))
-
         # ==========================================   
         @st.cache_data
         def setup_chinese_font():
             font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf"
             font_path = "NotoSansCJKtc-Regular.otf"
-        
             if not os.path.exists(font_path):
                 try:
                     response = requests.get(font_url)
-        
                     with open(font_path, "wb") as f:
                         f.write(response.content)
-        
                 except Exception as e:
                     st.error(f"字型下載失敗: {e}")
                     return None
-        
             return font_path
         
-        # 取得字型實體檔案路徑
         font_p = setup_chinese_font()
-        if font_p:
-            # 🌟 建立一個強制的字型屬性物件
-            my_font = fm.FontProperties(fname=font_p)
-        else:
-            my_font = None
+        my_font = fm.FontProperties(fname=font_p) if font_p else None
         
-        # ==========================================
-        # 🗺️ 繪製推薦路線地圖（完整版）
-        # ==========================================
-        
+        # 🗺️ 繪製推薦路線地圖
         fig, ax = plt.subplots(figsize=(12, 7))
-        
-        # 使用有向圖（才有箭頭）
         G = nx.DiGraph()
         
-        # 邊資料（加入權重）
         edges_with_weights = [
             ('V1', 'V2', {'wt': 5,  'ws': 2}),
             ('V1', 'V3', {'wt': 4,  'ws': 4}),
@@ -218,191 +261,51 @@ if st.sidebar.button("開始計算最佳路線"):
             ('V4', 'V6', {'wt': 7,  'ws': 1}),
             ('V5', 'V6', {'wt': 12, 'ws': 4})
         ]
-        
         G.add_edges_from(edges_with_weights)
         
-        # ==========================================
-        # 節點位置
-        # ==========================================
+        nx.draw_networkx_nodes(G, pos, node_color='#F8F8F8', node_size=2500, edgecolors='gray', linewidths=2, ax=ax)
+        nx.draw_networkx_edges(G, pos, edge_color='lightgray', width=2, arrows=False, ax=ax)
         
-        pos = {
-            'V1': (0.0,  0.0),
-            'V2': (1.5,  1.5),
-            'V3': (3.0,  0.8),
-            'V4': (1.5, -1.5),
-            'V5': (3.5, -2.0),
-            'V6': (5.0, -0.2)
-        }
-        
-        # ==========================================
-        # 畫節點
-        # ==========================================
-        
-        nx.draw_networkx_nodes(
-            G,
-            pos,
-            node_color='#F8F8F8',
-            node_size=2500,
-            edgecolors='gray',
-            linewidths=2,
-            ax=ax
-        )
-        
-        # ==========================================
-        # 畫所有灰色邊
-        # ==========================================
-        
-        nx.draw_networkx_edges(
-            G,
-            pos,
-            edge_color='lightgray',
-            width=2,
-            arrows=False,
-            ax=ax
-        )
-        
-        # ==========================================
-        # 顯示邊的權重
-        # ==========================================
-        
-        edge_labels = {}
-        
-        for u, v, data in G.edges(data=True):
-            edge_labels[(u, v)] = f"wt={data['wt']}\nws={data['ws']}"
-        
-        edge_texts = nx.draw_networkx_edge_labels(
-            G,
-            pos,
-            edge_labels=edge_labels,
-            font_size=9,
-            rotate=False,
-            ax=ax
-        )
-        
-        # 強制提高層級（關鍵）
+        edge_labels = {(u, v): f"wt={data['wt']}\nws={data['ws']}" for u, v, data in G.edges(data=True)}
+        edge_texts = nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=9, rotate=False, ax=ax)
         for text in edge_texts.values():
             text.set_zorder(10)
         
-        # ==========================================
-        # 顯示節點資訊
-        # ==========================================
-        
         for node, (x, y) in pos.items():
-        
             info = vertices[node]
-        
-            node_text = (
-                f"{node}\n"
-                f"{info['name']}\n\n"
-                f"t{info['Wt']}  "
-                f"c{info['Wc']}  "
-                f"e{info['We']}  "
-                f"p{info['Wp']}"
-            )
-        
-            ax.text(
-                x,
-                y,
-                node_text,
-                fontproperties=my_font if my_font else None,
-                fontsize=10,
-                ha='center',
-                va='center',
-                zorder=3
-            )
-        
-        # ==========================================
-        # 推薦路線（紅色箭頭）
-        # ==========================================
-        
-        recommended_path = result['path']
-        path_edges = list(zip(recommended_path, recommended_path[1:]))
-        
-        from matplotlib.patches import FancyArrowPatch
-
-        # ==========================================
-        # 畫推薦路線（真正的箭頭）
-        # ==========================================
+            node_text = f"{node}\n{info['name']}\n\nt{info['Wt']}  c{info['Wc']}  e{info['We']}  p{info['Wp']}"
+            ax.text(x, y, node_text, fontproperties=my_font, fontsize=10, ha='center', va='center', zorder=3)
         
         from matplotlib.patches import FancyArrowPatch
         import numpy as np
         
         def offset_vector(x1, y1, x2, y2, offset, base_start, base_end, pos):
-            # 永遠用固定順序（例如節點編號小的到大的）來計算垂直向量的方向
             bx1, by1 = pos[base_start]
             bx2, by2 = pos[base_end]
-            
-            bdx = bx2 - bx1
-            bdy = by2 - by1
+            bdx, bdy = bx2 - bx1, by2 - by1
             length = np.sqrt(bdx*bdx + bdy*bdy)
-        
-            if length == 0:
-                return x1, y1, x2, y2
-        
-            # 固定基準的垂直單位向量
-            nx = -bdy / length
-            ny = bdx / length
-        
-            # 對「當前實際的起終點」進行相同方向的偏移
-            return (
-                x1 + nx * offset,
-                y1 + ny * offset,
-                x2 + nx * offset,
-                y2 + ny * offset
-            )
+            if length == 0: return x1, y1, x2, y2
+            nx_val = -bdy / length
+            ny_val = bdx / length
+            return (x1 + nx_val * offset, y1 + ny_val * offset, x2 + nx_val * offset, y2 + ny_val * offset)
         
         drawn_pairs = set()
-        
         for start, end in path_edges:
             x1, y1 = pos[start]
             x2, y2 = pos[end]
-        
-            # 排序抓出基準節點（不論去回，base_start 和 base_end 永遠固定）
             base_start, base_end = sorted([start, end])
             pair = (base_start, base_end)
-        
-            # 判斷方向
-            if pair in drawn_pairs:
-                # 回程
-                offset = -0.05  # 往基準向量的相反方向偏
-                color = 'red'
-            else:
-                # 去程
-                offset = 0.05   # 往基準向量的相同方向偏
-                color = 'red'
-                drawn_pairs.add(pair)
-        
-            # 傳入 base_start 和 base_end 來固定垂直向量方向
+            
+            offset = -0.05 if pair in drawn_pairs else 0.05
+            drawn_pairs.add(pair)
+            
             x1, y1, x2, y2 = offset_vector(x1, y1, x2, y2, offset, base_start, base_end, pos)
-        
-            arrow = FancyArrowPatch(
-                (x1, y1),
-                (x2, y2),
-                arrowstyle='->',
-                mutation_scale=20,
-                color=color,
-                linewidth=4,
-                shrinkA=20,
-                shrinkB=20,
-                zorder=3
-            )
-        
+            arrow = FancyArrowPatch((x1, y1), (x2, y2), arrowstyle='->', mutation_scale=20, color='red', linewidth=4, shrinkA=20, shrinkB=20, zorder=3)
             ax.add_patch(arrow)
         
-        # ==========================================
-        # 美化
-        # ==========================================
-        
-        ax.set_title(
-            "主題樂園最佳遊園路線圖",
-            fontsize=16,
-            fontproperties=my_font if my_font else None
-        )
-        
+        ax.set_title("主題樂園最佳遊園路線圖", fontsize=16, fontproperties=my_font)
         ax.axis('off')
-        
         st.pyplot(fig)
-                
         
     else:
         st.error("抱歉！在您指定的極限條件下，找不到任何一條可以回到入口的可行路線。請試著放寬限制（例如增加時間或預算）。")
