@@ -159,7 +159,7 @@ if st.sidebar.button("開始計算最佳路線"):
                 location=location_gps[node],
                 popup=names[node],
                 tooltip=names[node],
-                icon=folium.Icon(color='red' if node in best_solution['visited_rides'] else 'blue', icon='info-sign')
+                icon=folium.Icon(color='red' if node in result['visited_rides'] else 'blue', icon='info-sign')
             )
         
         # 4. 用紅線把推薦路線依序連起來 (畫出軌跡)
