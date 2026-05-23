@@ -167,7 +167,32 @@ if st.sidebar.button("開始計算最佳路線"):
         
         # 3. 找出推薦路線經過的邊
         path_edges = list(zip(recommended_path, recommended_path[1:]))
+
+        import matplotlib.font_manager as fm
+        import requests
+        import os
         
+        # 🌟 解決中文字型變成方塊的終極黑魔法
+        @st.cache_data # 使用 Streamlit 快取，避免每次點擊按鈕都要重新下載
+        def load_chinese_font():
+            font_url = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
+            font_path = "NotoSans-Regular.ttf"
+            if not os.path.exists(font_path):
+                try:
+                    response = requests.get(font_url)
+                    with open(font_path, "wb") as f:
+                        f.write(response.content)
+                except:
+                    return None
+            return font_path
+        
+        # 呼叫函式下載字型
+        font_p = load_chinese_font()
+        if font_p:
+            my_font = fm.FontProperties(fname=font_p)
+        else:
+            my_font = None
+            
         # 4. 開始繪圖
         fig, ax = plt.subplots(figsize=(10, 6)) # 稍微拉寬，配合你們樂園橫向的地圖配置
         
@@ -175,8 +200,12 @@ if st.sidebar.button("開始計算最佳路線"):
         nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edgecolors='gray', ax=ax)
         nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
         
-        # 將標籤換成中英對照，並調整字體大小與排版
-        nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_family='sans-serif', ax=ax)
+        # 判斷如果有成功下載字型，就套用中文字型
+        if font_p:
+            nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_family=my_font.get_name(), ax=ax)
+        else:
+            # 備用方案：如果網路斷掉下載失敗，維持原本的設定
+            nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, ax=ax)
         
         # 用顯眼的粗紅線畫出系統推薦的行走路線！
         nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='#FF4B4B', width=4.5, ax=ax)
