@@ -63,6 +63,7 @@ class ParkPlanner:
                     'total_sun': s,
                     'total_preference': pref,
                     'rides_count': len(visited_rides)
+                    'visited_set': set(visited_rides)  # 🌟 多加這行，把當前玩過的集合存起來
                 }
             return
 
@@ -159,7 +160,8 @@ if st.sidebar.button("開始計算最佳路線"):
                 location=location_gps[node],
                 popup=names[node],
                 tooltip=names[node],
-                icon=folium.Icon(color='red' if node in result['visited_rides'] else 'blue', icon='info-sign')
+                # 這樣 result['visited_set'] 就存在了，不會再噴 KeyError
+                icon=folium.Icon(color='red' if node in result['visited_set'] else 'blue', icon='info-sign')
             )
         
         # 4. 用紅線把推薦路線依序連起來 (畫出軌跡)
