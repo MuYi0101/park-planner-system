@@ -346,25 +346,24 @@ if st.sidebar.button("開始計算最佳路線"):
                 y2 + ny * offset
             )
         
-        drawn_pairs = set()
-        
         for start, end in path_edges:
         
             x1, y1 = pos[start]
             x2, y2 = pos[end]
         
-            pair = tuple(sorted([start, end]))  # 🔥 抓「同一條邊」
-        
-            # 判斷方向
-            if pair in drawn_pairs:
-                # 回程（負偏移）
-                offset = -0.12
-                color = 'blue'
+            # 🔥 核心：方向決定正負
+            if (start, end) in path_edges:
+                direction_key = f"{start}->{end}"
             else:
-                # 去程（正偏移）
+                direction_key = f"{end}->{start}"
+        
+            # 👉 直接用 node 名字決定方向（避免重複判斷錯誤）
+            if list(path_edges).index((start, end)) % 2 == 0:
                 offset = 0.12
                 color = 'red'
-                drawn_pairs.add(pair)
+            else:
+                offset = -0.12
+                color = 'blue'
         
             x1, y1, x2, y2 = offset_vector(x1, y1, x2, y2, offset)
         
