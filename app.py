@@ -1,4 +1,6 @@
 import streamlit as st
+import networkx as nx
+import matplotlib.pyplot as plt
 
 # ==========================================
 # 1. 定義地圖資料模型 (Data Model)
@@ -112,7 +114,47 @@ if st.sidebar.button("開始計算最佳路線"):
     
     if result:
         st.success("成功生成最佳計畫！")
+        # 假設 best_solution['path'] 拿到的格式是 ['V1', 'V3', 'V6', 'V3', 'V1']
+
+        recommended_path = result['path'] 
         
+        st.subheader("🗺️ 推薦遊園路線圖")
+        
+        # 1. 建立圖形結構 (對照表2的聯通關係)
+        G = nx.Graph()
+        edges = [
+            ('V1', 'V2'), ('V1', 'V3'), ('V2', 'V3'), ('V2', 'V4'),
+            ('V3', 'V6'), ('V4', 'V5'), ('V4', 'V6'), ('V5', 'V6')
+        ]
+        G.add_edges_from(edges)
+        
+        # 2. 固定節點在網頁上的擺放位置 (仿照你們報告圖一的視覺位置)
+        pos = {
+            'V1': (0, 2),    # 入口廣場在最上方
+            'V2': (1, 1),    # 雲霄飛車
+            'V3': (-1, 1),   # 摩天輪
+            'V4': (0.5, -1), # 鬼屋
+            'V5': (1.5, -2), # 漂漂河
+            'V6': (-0.5, -2) # 旋轉木馬
+        }
+        
+        # 3. 找出推薦路線經過的邊
+        path_edges = list(zip(recommended_path, recommended_path[1:]))
+        
+        # 4. 開始繪圖
+        fig, ax = plt.subplots(figsize=(6, 4))
+        
+        # 畫出原本的所有設施與道路（灰色）
+        nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=700, ax=ax)
+        nx.draw_networkx_edges(G, pos, edgelist=edges, edgescolor='gray', width=1.5, ax=ax)
+        nx.draw_networkx_labels(G, pos, font_size=12, font_family='sans-serif', ax=ax)
+        
+        # 用顯眼的粗紅線畫出系統推薦的行走路線！
+        nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='red', width=3.5, ax=ax)
+        
+        # 美化外觀並顯示在 Streamlit 上
+        ax.axis('off')
+        st.pyplot(fig)
         # 顯示路線推薦
         st.subheader("推薦遊園路線")
         route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
