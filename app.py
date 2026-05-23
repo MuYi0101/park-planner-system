@@ -158,15 +158,20 @@ if st.sidebar.button("開始計算最佳路線"):
         # ==========================================   
         @st.cache_data
         def setup_chinese_font():
-            font_url = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
-            font_path = "NotoSans-Regular.ttf"
+            font_url = "https://github.com/googlefonts/noto-cjk/raw/main/Sans/OTF/TraditionalChinese/NotoSansCJKtc-Regular.otf"
+            font_path = "NotoSansCJKtc-Regular.otf"
+        
             if not os.path.exists(font_path):
                 try:
                     response = requests.get(font_url)
+        
                     with open(font_path, "wb") as f:
                         f.write(response.content)
-                except:
+        
+                except Exception as e:
+                    st.error(f"字型下載失敗: {e}")
                     return None
+        
             return font_path
         
         # 取得字型實體檔案路徑
@@ -219,22 +224,18 @@ if st.sidebar.button("開始計算最佳路線"):
         
         # 畫出原本的灰色道路
         nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
-        
-        # ========================================================
-        # 🌟 【終極防噴錯】不用 NetworkX 的標籤，直接用 Matplotlib 畫中文
-        # ========================================================
+
         for node, (x, y) in pos.items():
             node_text = labels[node]
             
             if my_font:
-                # 直接使用 Matplotlib 核心的 ax.text，100% 支援 fontproperties 參數，絕對不會噴 TypeError！
                 ax.text(
                     x, y, node_text,
                     fontproperties=my_font,
                     fontsize=10,
-                    ha='center',      # 水平置中
-                    va='center',      # 垂直置中
-                    zorder=3          # 確保文字蓋在圓圈上面
+                    ha='center',     
+                    va='center',     
+                    zorder=3          
                 )
             else:
                 # 萬一字型下載失敗的備用方案
