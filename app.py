@@ -172,7 +172,7 @@ if st.sidebar.button("開始計算最佳路線"):
         fig, ax = plt.subplots(figsize=(10, 6)) # 稍微拉寬，配合你們樂園橫向的地圖配置
         
         # 畫出原本的所有設施與道路（灰色）
-        nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edge_color='gray', ax=ax)
+        nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edgecolors='gray', ax=ax)
         nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
         
         # 將標籤換成中英對照，並調整字體大小與排版
