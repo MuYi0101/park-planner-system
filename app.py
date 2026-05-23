@@ -5,11 +5,11 @@ import streamlit as st
 # ==========================================
 vertices = {
     'V1': {'name': '入口廣場', 'Wt': 0, 'Wc': 0, 'We': 0, 'Wp': 0},
-    'V2': {'name': '雲霄飛車', 'Wt': 150, 'Wc': 15, 'We': 8, 'Wp': 9},
+    'V2': {'name': '雲霄飛車', 'Wt': 15, 'Wc': 150, 'We': 8, 'Wp': 9},
     'V3': {'name': '摩天輪',   'Wt': 20,  'Wc': 100, 'We': 2, 'Wp': 6},
     'V4': {'name': '鬼屋',     'Wt': 25,  'Wc': 120, 'We': 6, 'Wp': 8},
-    'V5': {'name': '漂漂河',   'Wt': 80,  'Wc': 30,  'We': 4, 'Wp': 7},
-    'V6': {'name': '旋轉木馬', 'Wt': 50,  'Wc': 10,  'We': 1, 'Wp': 5}
+    'V5': {'name': '漂漂河',   'Wt': 30,  'Wc': 80,  'We': 4, 'Wp': 7},
+    'V6': {'name': '旋轉木馬', 'Wt': 10,  'Wc': 50,  'We': 1, 'Wp': 5}
 }
 
 graph = {
@@ -45,7 +45,12 @@ class ParkPlanner:
         if len(visited_rides) + remaining_rides < self.best_metrics[0]:
             return
 
+        # 當回到起點 V1，且路徑長度大於 1 時，進行最佳解檢查
         if curr == 'V1' and len(path) > 1:
+            # 💡 修正：如果整趟路線一個設施都沒玩到（rides_count == 0），視為無效行程，直接拒絕！
+            if len(visited_rides) == 0:
+                return
+                
             current_metrics = [len(visited_rides), pref, -t, -c, -s]
             if current_metrics > self.best_metrics:
                 self.best_metrics = current_metrics
@@ -75,10 +80,17 @@ class ParkPlanner:
                           max_t, max_c, max_e, max_s)
                 visited_rides.remove(neighbor)
 
+            # 分支二：選擇「只經過、不遊玩」（或回到起點 V1）
             if path.count(neighbor) < 2:
-                self._dfs(neighbor, t + edge_t, c, e, s + edge_s, 
-                          path + [neighbor], visited_rides, pref, 
-                          max_t, max_c, max_e, max_s)
+                # 🌟 關鍵防呆限制：如果這個設施還沒被玩過（不在 visited_rides 裡面），且它不是起點 V1
+                # 那就絕對不能「只路過不玩」，必須強制跳過這個分支（不執行 _dfs）
+                if neighbor != 'V1' and (neighbor not in visited_rides):
+                    pass  # 沒玩過就不能純路過，直接不建立這個分支
+                else:
+                    # 只有「已經玩過該設施」或「要回起點 V1」時，才允許純路過
+                    self._dfs(neighbor, t + edge_t, c, e, s + edge_s, 
+                              path + [neighbor], visited_rides, pref, 
+                              max_t, max_c, max_e, max_s)
 
 # ==========================================
 # 3. Streamlit 網頁使用者介面 (UI)
