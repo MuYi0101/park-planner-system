@@ -270,7 +270,7 @@ if st.sidebar.button("開始計算最佳路線"):
         for u, v, data in G.edges(data=True):
             edge_labels[(u, v)] = f"wt={data['wt']}\nws={data['ws']}"
         
-        nx.draw_networkx_edge_labels(
+        edge_texts = nx.draw_networkx_edge_labels(
             G,
             pos,
             edge_labels=edge_labels,
@@ -278,6 +278,10 @@ if st.sidebar.button("開始計算最佳路線"):
             rotate=False,
             ax=ax
         )
+        
+        # 強制提高層級（關鍵）
+        for text in edge_texts.values():
+            text.set_zorder(10)
         
         # ==========================================
         # 顯示節點資訊
