@@ -155,12 +155,7 @@ if st.sidebar.button("開始計算最佳路線"):
         # 3. 找出推薦路線經過的邊
         path_edges = list(zip(recommended_path, recommended_path[1:]))
 
-        # 🌟 下載中文字型（維持原樣，確保檔案存在）
-        # ==========================================
-        import matplotlib.font_manager as fm
-        import requests
-        import os
-        
+        # ==========================================   
         @st.cache_data
         def setup_chinese_font():
             font_url = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
@@ -216,29 +211,47 @@ if st.sidebar.button("開始計算最佳路線"):
         recommended_path = result['path']
         path_edges = list(zip(recommended_path, recommended_path[1:]))
         
+        # 4. 開始繪圖
         fig, ax = plt.subplots(figsize=(10, 6)) 
         
-        # 1. 畫出所有設施圓圈
+        # 畫出所有設施圓圈（不包含文字）
         nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edgecolors='gray', ax=ax)
         
-        # 2. 畫出原本的灰色道路
+        # 畫出原本的灰色道路
         nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
         
-        # 3. 🔥【最關鍵的修正】強制給予 fontproperties 物件
-        if my_font:
-            # NetworkX 接受一個名為 font_kw 的字典參數，裡面可以強行塞入 Matplotlib 專用的 fontproperties！
-            nx.draw_networkx_labels(
-                G, pos, labels=labels, font_size=10, ax=ax,
-                font_kw={"fontproperties": my_font}  # 🌟 用這個方法，把字型檔案直接硬塞進底層的 ax.text 裡
-            )
-        else:
-            # 萬一連字型都下載失敗的備用方案
-            nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, ax=ax)
+        # ========================================================
+        # 🌟 【終極防噴錯】不用 NetworkX 的標籤，直接用 Matplotlib 畫中文
+        # ========================================================
+        for node, (x, y) in pos.items():
+            node_text = labels[node]
+            
+            if my_font:
+                # 直接使用 Matplotlib 核心的 ax.text，100% 支援 fontproperties 參數，絕對不會噴 TypeError！
+                ax.text(
+                    x, y, node_text,
+                    fontproperties=my_font,
+                    fontsize=10,
+                    ha='center',      # 水平置中
+                    va='center',      # 垂直置中
+                    zorder=3          # 確保文字蓋在圓圈上面
+                )
+            else:
+                # 萬一字型下載失敗的備用方案
+                ax.text(
+                    x, y, node_text,
+                    fontsize=10,
+                    ha='center', va='center', zorder=3
+                )
+        # ========================================================
         
-        # 4. 畫出系統推薦的紅色路線
+        # 畫出系統推薦的紅色路線
         nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='#FF4B4B', width=4.5, ax=ax)
         
+        # 關閉座標軸
         ax.axis('off')
+        
+        # 渲染到網頁
         st.pyplot(fig)
                 
         # 顯示路線推薦
