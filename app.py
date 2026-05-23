@@ -100,7 +100,7 @@ st.sidebar.header("請輸入您的遊園限制")
 max_time = st.sidebar.slider("時間上限 (分鐘)", 0, 600, 70)
 max_cost = st.sidebar.slider("預算上限 (新台幣)", 0, 500, 300)
 max_energy = st.sidebar.slider("體力上限 (1-30)", 1, 30, 15)
-max_sun = st.sidebar.slider("可接受曝曬指數上限", 1, 30, 10)
+max_sun = st.sidebar.slider("可接受曝曬指數上限", 1, 20, 10)
 
 st.sidebar.markdown("---")
 if st.sidebar.button("開始計算最佳路線"):
