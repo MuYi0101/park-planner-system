@@ -95,132 +95,90 @@ class ParkPlanner:
                               max_t, max_c, max_e, max_s)
 
 # ==========================================
-# 3. Streamlit 網頁使用者介面 (UI)
+# 4. Streamlit 網頁前端介面實作
 # ==========================================
-st.set_page_config(page_title="主題樂園最佳遊園計畫系統", layout="wide")
+st.set_page_config(layout="wide") # 寬螢幕排版，左邊放輸入、右邊放地圖與數據
+
 st.title("演算法概論：主題樂園最佳遊園計畫系統 (第八組)")
 
-# 側邊欄：輸入條件
+# 建立左側邊欄輸入遊園限制
 st.sidebar.header("請輸入您的遊園限制")
-max_time = st.sidebar.slider("時間上限 (分鐘)", 0, 600, 70)
-max_cost = st.sidebar.slider("預算上限 (新台幣)", 0, 500, 300)
-max_energy = st.sidebar.slider("體力上限 (1-30)", 1, 30, 15)
-max_sun = st.sidebar.slider("可接受曝曬指數上限", 1, 20, 10)
+max_time = st.sidebar.slider("時間上限 (分鐘)", min_value=10, max_value=600, value=120, step=5)
+max_cost = st.sidebar.slider("預算上限 (新台幣)", min_value=0, max_value=1000, value=500, step=10)
+max_energy = st.sidebar.slider("體力上限 (1-30)", min_value=1, max_value=30, value=15, step=1)
+max_sun = st.sidebar.slider("可接受曝曬指數上限", min_value=1, max_value=50, value=20, step=1)
 
-st.sidebar.markdown("---")
+# 按鈕觸發計算
 if st.sidebar.button("開始計算最佳路線"):
     planner = ParkPlanner(vertices, graph)
     result = planner.solve(max_time, max_cost, max_energy, max_sun)
-    
+
     if result:
-        st.success("成功生成最佳計畫！")
+        st.success("🎉 成功生成最佳計畫！")
         
-        # 顯示路線推薦
+        # 顯示推薦路線
+        path_names = [f"{vertices[node]['name']} ({node})" for node in result['path']]
         st.subheader("推薦遊園路線")
-        route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
-        st.info(route_display)
+        st.info(" ➔ ".join(path_names))
         
-        # 顯示數據指標
+        # 數據統計呈現
         st.subheader("行程數據統計")
         col1, col2, col3 = st.columns(3)
-        col1.metric("遊玩設施數量", f"{result['rides_count']} 個")
-        col2.metric("總偏好分數", f"{result['total_preference']} 分")
-        col3.metric("總花費時間", f"{result['total_time']} 分鐘")
-        
-        col4, col5, col6 = st.columns(3)
-        col4.metric("總花費金額", f"{result['total_cost']} 元")
-        col5.metric("體力消耗", f"{result['total_energy']} / {max_energy}")
-        col6.metric("累積曝曬指數", f"{result['total_sun']} / {max_sun}")
+        with col1:
+            st.metric("遊玩設施數量", f"{result['rides_count']} 個")
+            st.metric("總花費金額", f"{result['total_cost']} 元")
+        with col2:
+            st.metric("總偏好分數", f"{result['total_preference']} 分")
+            st.metric("體力消耗", f"{result['total_energy']} / {max_energy}")
+        with col3:
+            st.metric("總花費時間", f"{result['total_time']} 分鐘")
+            st.metric("累積曝曬指數", f"{result['total_sun']} / {max_sun}")
 
-        st.subheader("🗺️ 樂園實景導覽地圖")
-
-        # 假設 best_solution['path'] 拿到的格式是 ['V1', 'V3', 'V6', 'V3', 'V1']
-        recommended_path = result['path'] 
+        # -------------------------------------------
+        # 5. NetworkX 繪製與報告地圖完全同形狀之圖表
+        # -------------------------------------------
+        st.subheader("🗺️ 推薦遊園路線圖")
         
-        st.subheader("推薦遊園路線圖")
-        
-        # 1. 建立圖形結構 (對照表2的聯通關係)
         G = nx.Graph()
-        edges = [
+        edges_list = [
             ('V1', 'V2'), ('V1', 'V3'), ('V2', 'V3'), ('V2', 'V4'),
             ('V3', 'V6'), ('V4', 'V5'), ('V4', 'V6'), ('V5', 'V6')
         ]
-        G.add_edges_from(edges)
-        
-        # 2. 固定節點在網頁上的擺放位置 (完美對齊報告圖 image_bdca24.png 的視覺位置)
-        # 比例尺與相對位置均依據：V1在最左，V2在中上，V3在右上，V4在中下，V5在右下，V6在最右
+        G.add_edges_from(edges_list)
+
+        # 完美對齊 image_bdca24.png 的視覺相對座標
         pos = {
-            'V1': (0.0,  0.0),   # 入口廣場 (最左邊中心)
-            'V2': (1.5,  1.5),   # 雲霄飛車 (中偏上)
-            'V3': (3.0,  0.8),   # 摩天輪   (右偏上)
-            'V4': (1.5, -1.5),   # 鬼屋     (中偏下)
-            'V5': (3.5, -2.0),   # 漂漂河   (右偏下)
-            'V6': (5.0, -0.2)    # 旋轉木馬 (最右邊中心)
+            'V1': (0.0,  0.0),   # 入口廣場
+            'V2': (1.5,  1.5),   # 雲霄飛車
+            'V3': (3.0,  0.8),   # 摩天輪
+            'V4': (1.5, -1.5),   # 鬼屋
+            'V5': (3.5, -2.0),   # 漂漂河
+            'V6': (5.0, -0.2)    # 旋轉木馬
         }
-        
-        # 設施名稱對照表 (讓地圖上直接顯示中文名稱而非單純的 V1、V2)
+
         labels = {
-            'V1': '入口廣場\n(V1)',
-            'V2': '雲霄飛車\n(V2)',
-            'V3': '摩天輪\n(V3)',
-            'V4': '鬼屋\n(V4)',
-            'V5': '漂漂河\n(V5)',
-            'V6': '旋轉木馬\n(V6)'
+            'V1': '入口廣場\n(V1)', 'V2': '雲霄飛車\n(V2)', 'V3': '摩天輪\n(V3)',
+            'V4': '鬼屋\n(V4)', 'V5': '漂漂河\n(V5)', 'V6': '旋轉木馬\n(V6)'
         }
-        
-        # 3. 找出推薦路線經過的邊
+
+        # 算出推薦路線經過的線條 (Edges)
+        recommended_path = result['path']
         path_edges = list(zip(recommended_path, recommended_path[1:]))
- 
-        # 🌟 解決中文字型變成方塊的終極黑魔法
-        @st.cache_data # 使用 Streamlit 快取，避免每次點擊按鈕都要重新下載
-        def load_chinese_font():
-            font_url = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
-            font_path = "NotoSans-Regular.ttf"
-            if not os.path.exists(font_path):
-                try:
-                    response = requests.get(font_url)
-                    with open(font_path, "wb") as f:
-                        f.write(response.content)
-                except:
-                    return None
-            return font_path
+
+        fig, ax = plt.subplots(figsize=(10, 5))
         
-        # 呼叫函式下載字型
-        font_p = load_chinese_font()
-        if font_p:
-            my_font = fm.FontProperties(fname=font_p)
-        else:
-            my_font = None
-            
-        # 4. 開始繪圖
-        fig, ax = plt.subplots(figsize=(10, 6)) # 稍微拉寬，配合你們樂園橫向的地圖配置
-        
-        # 畫出原本的所有設施與道路（灰色）
+        # 畫出底圖（設施圓圈與所有步道）
         nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edgecolors='gray', ax=ax)
-        nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
+        nx.draw_networkx_edges(G, pos, edgelist=edges_list, edge_color='#D3D3D3', width=2, ax=ax)
         
-        # 判斷如果有成功下載字型，就套用中文字型
-        # 💡 終極修正版：直接用 fontproperties 強制注入字型物件
-        if font_p and my_font:
-            # 注意：這裡我們把原本的 font_family 拔掉，改成使用 kwargs (關鍵字參數) 的方式傳入 fontproperties
-            nx.draw_networkx_labels(
-                G, pos, 
-                labels=labels, 
-                font_size=10, 
-                ax=ax,
-                fontproperties=my_font  # 🔥 強制指定字型實體，這能 100% 解決 Linux 上的方塊問題！
-            )
-        else:
-            # 備用方案（如果網路斷掉下載失敗）
-            nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, ax=ax)
-        
-        # 用顯眼的粗紅線畫出系統推薦的行走路線！
-        nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='#FF4B4B', width=4.5, ax=ax)
-        
-        # 美化外觀並顯示在 Streamlit 上
+        # 畫上完美的繁體中文標籤 (套用我們全域註冊的字型)
+        nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_family=font_family_name, ax=ax)
+
+        # 用紅色粗體線條高亮標記出系統推薦的行走軌跡！
+        nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='#FF4B4B', width=5, ax=ax)
+
         ax.axis('off')
         st.pyplot(fig)
+
     else:
-        st.error("抱歉！在您指定的極限條件下，找不到任何一條可以回到入口的可行路線。請試著放寬限制（例如增加時間或預算）。")
-else:
-    st.info("請在左側調整您的偏好與資源限制，然後點擊「開始計算最佳路線」。")
+        st.error("❌ 抱歉！在您指定的極限條件下，演算法找不到任何一條可以回到入口的可行路線。請試著放寬左側的限制。")
