@@ -327,18 +327,15 @@ if st.sidebar.button("開始計算最佳路線"):
         from matplotlib.patches import FancyArrowPatch
         import numpy as np
         
-        drawn = set()
-        
-        def offset_line(x1, y1, x2, y2, offset=0.08):
-            """把線段做垂直偏移，避免重疊"""
+        def offset_vector(x1, y1, x2, y2, offset):
             dx = x2 - x1
             dy = y2 - y1
-        
             length = np.sqrt(dx*dx + dy*dy)
+        
             if length == 0:
                 return x1, y1, x2, y2
         
-            # 單位法向量（垂直方向）
+            # 垂直單位向量
             nx = -dy / length
             ny = dx / length
         
@@ -349,21 +346,27 @@ if st.sidebar.button("開始計算最佳路線"):
                 y2 + ny * offset
             )
         
-        for start, end in path_edges:
+        drawn_pairs = set()
         
-            # 判斷方向（去 / 回）
-            if (end, start) in drawn:
-                color = 'blue'   # 回程
-                offset = -0.08
-            else:
-                color = 'red'    # 去程
-                offset = 0.08
+        for start, end in path_edges:
         
             x1, y1 = pos[start]
             x2, y2 = pos[end]
         
-            # ⭐ 重點：平移線段，不用 curve
-            x1, y1, x2, y2 = offset_line(x1, y1, x2, y2, offset)
+            pair = tuple(sorted([start, end]))  # 🔥 抓「同一條邊」
+        
+            # 判斷方向
+            if pair in drawn_pairs:
+                # 回程（負偏移）
+                offset = -0.12
+                color = 'blue'
+            else:
+                # 去程（正偏移）
+                offset = 0.12
+                color = 'red'
+                drawn_pairs.add(pair)
+        
+            x1, y1, x2, y2 = offset_vector(x1, y1, x2, y2, offset)
         
             arrow = FancyArrowPatch(
                 (x1, y1),
@@ -378,8 +381,6 @@ if st.sidebar.button("開始計算最佳路線"):
             )
         
             ax.add_patch(arrow)
-        
-            drawn.add((start, end))
         
         # ==========================================
         # 美化
