@@ -151,7 +151,7 @@ if st.sidebar.button("開始計算最佳路線"):
         m = folium.Map(location=location_gps['V1'], zoom_start=17)
         
         # 3. 在地圖上針對「推薦路線中要去玩或經過的點」插上圖標 (Marker)
-        recommended_path = best_solution['path']
+        recommended_path = result['path']
         unique_nodes = set(recommended_path)
         
         for node in unique_nodes:
