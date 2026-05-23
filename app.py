@@ -200,10 +200,18 @@ if st.sidebar.button("開始計算最佳路線"):
         nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
         
         # 判斷如果有成功下載字型，就套用中文字型
-        if font_p:
-            nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_family=my_font.get_name(), ax=ax)
+        # 💡 終極修正版：直接用 fontproperties 強制注入字型物件
+        if font_p and my_font:
+            # 注意：這裡我們把原本的 font_family 拔掉，改成使用 kwargs (關鍵字參數) 的方式傳入 fontproperties
+            nx.draw_networkx_labels(
+                G, pos, 
+                labels=labels, 
+                font_size=10, 
+                ax=ax,
+                fontproperties=my_font  # 🔥 強制指定字型實體，這能 100% 解決 Linux 上的方塊問題！
+            )
         else:
-            # 備用方案：如果網路斷掉下載失敗，維持原本的設定
+            # 備用方案（如果網路斷掉下載失敗）
             nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, ax=ax)
         
         # 用顯眼的粗紅線畫出系統推薦的行走路線！
