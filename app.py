@@ -186,7 +186,8 @@ if st.sidebar.button("開始計算最佳路線"):
                     return 'background-color: #f8d7da; color: #721c24;'
                 return ''
                 
-            styled_df = df_history.style.applymap(highlight_cells, subset=['狀態/結果'])
+            # 將 applymap 改為 map
+            styled_df = df_history.style.map(highlight_cells, subset=['狀態/結果'])
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
 
         st.markdown("---")
