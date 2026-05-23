@@ -1,6 +1,6 @@
 import streamlit as st
-import networkx as nx
-import matplotlib.pyplot as plt
+import folium
+from streamlit_folium import st_folium
 
 # ==========================================
 # 1. 定義地圖資料模型 (Data Model)
