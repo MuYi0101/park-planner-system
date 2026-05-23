@@ -198,76 +198,147 @@ if st.sidebar.button("開始計算最佳路線"):
         else:
             my_font = None
         
-        
         # ==========================================
-        # 🗺️ 繪製推薦路線地圖（改用強制字典指定字型）
+        # 🗺️ 繪製推薦路線地圖（完整版）
         # ==========================================
         
-        G = nx.Graph()
-        edges = [
-            ('V1', 'V2'), ('V1', 'V3'), ('V2', 'V3'), ('V2', 'V4'),
-            ('V3', 'V6'), ('V4', 'V5'), ('V4', 'V6'), ('V5', 'V6')
+        fig, ax = plt.subplots(figsize=(12, 7))
+        
+        # 使用有向圖（才有箭頭）
+        G = nx.DiGraph()
+        
+        # 邊資料（加入權重）
+        edges_with_weights = [
+            ('V1', 'V2', {'wt': 5,  'ws': 2}),
+            ('V1', 'V3', {'wt': 4,  'ws': 4}),
+            ('V2', 'V3', {'wt': 6,  'ws': 1}),
+            ('V2', 'V4', {'wt': 10, 'ws': 3}),
+            ('V3', 'V6', {'wt': 8,  'ws': 5}),
+            ('V4', 'V5', {'wt': 5,  'ws': 2}),
+            ('V4', 'V6', {'wt': 7,  'ws': 1}),
+            ('V5', 'V6', {'wt': 12, 'ws': 4})
         ]
-        G.add_edges_from(edges)
+        
+        G.add_edges_from(edges_with_weights)
+        
+        # ==========================================
+        # 節點位置
+        # ==========================================
         
         pos = {
-            'V1': (0.0,  0.0),   
-            'V2': (1.5,  1.5),   
-            'V3': (3.0,  0.8),   
-            'V4': (1.5, -1.5),   
-            'V5': (3.5, -2.0),   
-            'V6': (5.0, -0.2)    
+            'V1': (0.0,  0.0),
+            'V2': (1.5,  1.5),
+            'V3': (3.0,  0.8),
+            'V4': (1.5, -1.5),
+            'V5': (3.5, -2.0),
+            'V6': (5.0, -0.2)
         }
         
-        labels = {
-            'V1': '入口廣場\n(V1)',
-            'V2': '雲霄飛車\n(V2)',
-            'V3': '摩天輪\n(V3)',
-            'V4': '鬼屋\n(V4)',
-            'V5': '漂漂河\n(V5)',
-            'V6': '旋轉木馬\n(V6)'
-        }
+        # ==========================================
+        # 畫節點
+        # ==========================================
+        
+        nx.draw_networkx_nodes(
+            G,
+            pos,
+            node_color='#F8F8F8',
+            node_size=2500,
+            edgecolors='gray',
+            linewidths=2,
+            ax=ax
+        )
+        
+        # ==========================================
+        # 畫所有灰色邊
+        # ==========================================
+        
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edge_color='lightgray',
+            width=2,
+            arrows=False,
+            ax=ax
+        )
+        
+        # ==========================================
+        # 顯示邊的權重
+        # ==========================================
+        
+        edge_labels = {}
+        
+        for u, v, data in G.edges(data=True):
+            edge_labels[(u, v)] = f"wt={data['wt']}\nws={data['ws']}"
+        
+        nx.draw_networkx_edge_labels(
+            G,
+            pos,
+            edge_labels=edge_labels,
+            font_size=9,
+            rotate=False,
+            ax=ax
+        )
+        
+        # ==========================================
+        # 顯示節點資訊
+        # ==========================================
+        
+        for node, (x, y) in pos.items():
+        
+            info = vertices[node]
+        
+            node_text = (
+                f"{node}\n"
+                f"{info['name']}\n\n"
+                f"t{info['Wt']}  "
+                f"c{info['Wc']}  "
+                f"e{info['We']}  "
+                f"p{info['Wp']}"
+            )
+        
+            ax.text(
+                x,
+                y,
+                node_text,
+                fontproperties=my_font if my_font else None,
+                fontsize=10,
+                ha='center',
+                va='center',
+                zorder=3
+            )
+        
+        # ==========================================
+        # 推薦路線（紅色箭頭）
+        # ==========================================
         
         recommended_path = result['path']
         path_edges = list(zip(recommended_path, recommended_path[1:]))
         
-        # 4. 開始繪圖
-        fig, ax = plt.subplots(figsize=(10, 6)) 
+        nx.draw_networkx_edges(
+            G,
+            pos,
+            edgelist=path_edges,
+            edge_color='red',
+            width=4,
+            arrows=True,
+            arrowstyle='-|>',
+            arrowsize=25,
+            connectionstyle='arc3,rad=0.05',
+            ax=ax
+        )
         
-        # 畫出所有設施圓圈（不包含文字）
-        nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edgecolors='gray', ax=ax)
+        # ==========================================
+        # 美化
+        # ==========================================
         
-        # 畫出原本的灰色道路
-        nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
-
-        for node, (x, y) in pos.items():
-            node_text = labels[node]
-            
-            if my_font:
-                ax.text(
-                    x, y, node_text,
-                    fontproperties=my_font,
-                    fontsize=10,
-                    ha='center',     
-                    va='center',     
-                    zorder=3          
-                )
-            else:
-                # 萬一字型下載失敗的備用方案
-                ax.text(
-                    x, y, node_text,
-                    fontsize=10,
-                    ha='center', va='center', zorder=3
-                )
-        # ========================================================
+        ax.set_title(
+            "主題樂園最佳遊園路線圖",
+            fontsize=16,
+            fontproperties=my_font if my_font else None
+        )
         
-        # 畫出系統推薦的紅色路線
-        nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='#FF4B4B', width=4.5, ax=ax)
-        
-        # 關閉座標軸
         ax.axis('off')
         
-        # 渲染到網頁
         st.pyplot(fig)
                 
         
