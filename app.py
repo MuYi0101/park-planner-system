@@ -173,7 +173,7 @@ if st.sidebar.button("開始計算最佳路線"):
         # 🌟 新增：演算法路徑計算過程展示區塊
         # ==========================================
         st.markdown("---")
-        st.subheader("🕵️ 深度優先搜尋 (DFS) 演算法計算軌跡")
+        st.subheader("深度優先搜尋 (DFS) 演算法計算軌跡")
         
         with st.expander(f"點擊展開 / 摺疊詳細計算步驟 (全域共執行 {len(history)} 步走訪與剪枝)"):
             df_history = pd.DataFrame(history)
@@ -275,7 +275,7 @@ if st.sidebar.button("開始計算最佳路線"):
         # ==========================================
         
         recommended_path = result['path']
-        path_edges = list(zip(recommended_path, recommended_path[1:])) # 🌟 確保這一行有加上！
+        path_edges = list(zip(recommended_path, recommended_path[1:]))
 
         drawn_pairs = set()
         for start, end in path_edges:
