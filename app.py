@@ -128,33 +128,47 @@ if st.sidebar.button("開始計算最佳路線"):
         ]
         G.add_edges_from(edges)
         
-        # 2. 固定節點在網頁上的擺放位置 (仿照你們報告圖一的視覺位置)
+        # 2. 固定節點在網頁上的擺放位置 (完美對齊報告圖 image_bdca24.png 的視覺位置)
+        # 比例尺與相對位置均依據：V1在最左，V2在中上，V3在右上，V4在中下，V5在右下，V6在最右
         pos = {
-            'V1': (0, 2),    # 入口廣場在最上方
-            'V2': (1, 1),    # 雲霄飛車
-            'V3': (-1, 1),   # 摩天輪
-            'V4': (0.5, -1), # 鬼屋
-            'V5': (1.5, -2), # 漂漂河
-            'V6': (-0.5, -2) # 旋轉木馬
+            'V1': (0.0,  0.0),   # 入口廣場 (最左邊中心)
+            'V2': (1.5,  1.5),   # 雲霄飛車 (中偏上)
+            'V3': (3.0,  0.8),   # 摩天輪   (右偏上)
+            'V4': (1.5, -1.5),   # 鬼屋     (中偏下)
+            'V5': (3.5, -2.0),   # 漂漂河   (右偏下)
+            'V6': (5.0, -0.2)    # 旋轉木馬 (最右邊中心)
+        }
+        
+        # 設施名稱對照表 (讓地圖上直接顯示中文名稱而非單純的 V1、V2)
+        labels = {
+            'V1': '入口廣場\n(V1)',
+            'V2': '雲霄飛車\n(V2)',
+            'V3': '摩天輪\n(V3)',
+            'V4': '鬼屋\n(V4)',
+            'V5': '漂漂河\n(V5)',
+            'V6': '旋轉木馬\n(V6)'
         }
         
         # 3. 找出推薦路線經過的邊
         path_edges = list(zip(recommended_path, recommended_path[1:]))
         
         # 4. 開始繪圖
-        fig, ax = plt.subplots(figsize=(6, 4))
+        fig, ax = plt.subplots(figsize=(10, 6)) # 稍微拉寬，配合你們樂園橫向的地圖配置
         
         # 畫出原本的所有設施與道路（灰色）
-        nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=700, ax=ax)
-        nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='gray', width=1.5, ax=ax)
-        nx.draw_networkx_labels(G, pos, font_size=12, font_family='sans-serif', ax=ax)
+        nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edgecolors='gray', ax=ax)
+        nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
+        
+        # 將標籤換成中英對照，並調整字體大小與排版
+        nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_family='sans-serif', ax=ax)
         
         # 用顯眼的粗紅線畫出系統推薦的行走路線！
-        nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='red', width=3.5, ax=ax)
+        nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='#FF4B4B', width=4.5, ax=ax)
         
         # 美化外觀並顯示在 Streamlit 上
         ax.axis('off')
         st.pyplot(fig)
+        
         # 顯示路線推薦
         st.subheader("推薦遊園路線")
         route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
