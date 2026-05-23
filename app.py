@@ -1,6 +1,9 @@
 import streamlit as st
 import networkx as nx
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+import requests
+import os
 
 # ==========================================
 # 1. 定義地圖資料模型 (Data Model)
@@ -152,21 +155,88 @@ if st.sidebar.button("開始計算最佳路線"):
         # 3. 找出推薦路線經過的邊
         path_edges = list(zip(recommended_path, recommended_path[1:]))
         
-        # 4. 開始繪圖
-        fig, ax = plt.subplots(figsize=(10, 6)) # 稍微拉寬，配合你們樂園橫向的地圖配置
+        # 🌟 解決中文字型變成方塊的終極黑魔法
+        @st.cache_data
+        def setup_chinese_font():
+            # 下載 Google 開源中文字型
+            font_url = "https://github.com/googlefonts/noto-fonts/raw/main/hinted/ttf/NotoSans/NotoSans-Regular.ttf"
+            font_path = "NotoSans-Regular.ttf"
+            if not os.path.exists(font_path):
+                try:
+                    response = requests.get(font_url)
+                    with open(font_path, "wb") as f:
+                        f.write(response.content)
+                except:
+                    return "sans-serif"
+                    
+            # 將字型註冊進 Matplotlib 系統中
+            try:
+                fm.fontManager.addfont(font_path)
+                prop = fm.FontProperties(fname=font_path)
+                return prop.get_name()
+            except:
+                return "sans-serif"
         
-        # 畫出原本的所有設施與道路（灰色）
+        # 執行註冊並取得字型名稱
+        font_family_name = setup_chinese_font()
+        
+        
+        # ==========================================
+        # 🗺️ 這裡開始是「繪製推薦路線地圖」的區塊
+        # ==========================================
+        st.subheader("🗺️ 推薦遊園路線圖")
+        
+        # 1. 建立圖形結構 (完全對照表2的聯通關係)
+        G = nx.Graph()
+        edges = [
+            ('V1', 'V2'), ('V1', 'V3'), ('V2', 'V3'), ('V2', 'V4'),
+            ('V3', 'V6'), ('V4', 'V5'), ('V4', 'V6'), ('V5', 'V6')
+        ]
+        G.add_edges_from(edges)
+        
+        # 2. 固定節點在網頁上的擺放位置 (完美對齊報告圖 image_bdca24.png)
+        pos = {
+            'V1': (0.0,  0.0),   # 入口廣場 (最左邊中心)
+            'V2': (1.5,  1.5),   # 雲霄飛車 (中偏上)
+            'V3': (3.0,  0.8),   # 摩天輪   (右偏上)
+            'V4': (1.5, -1.5),   # 鬼屋     (中偏下)
+            'V5': (3.5, -2.0),   # 漂漂河   (右偏下)
+            'V6': (5.0, -0.2)    # 旋轉木馬 (最右邊中心)
+        }
+        
+        # 設施名稱對照表 (換行排版讓字不會超出圈圈)
+        labels = {
+            'V1': '入口廣場\n(V1)',
+            'V2': '雲霄飛車\n(V2)',
+            'V3': '摩天輪\n(V3)',
+            'V4': '鬼屋\n(V4)',
+            'V5': '漂漂河\n(V5)',
+            'V6': '旋轉木馬\n(V6)'
+        }
+        
+        # 3. 從 result 中拿出推薦路線
+        recommended_path = result['path']
+        path_edges = list(zip(recommended_path, recommended_path[1:]))
+        
+        # 4. 開始繪圖
+        fig, ax = plt.subplots(figsize=(10, 6)) # 寬度10、高度6 的橫向畫布
+        
+        # 畫出所有設施圓圈（灰邊淡底，放大到1800讓中文字塞得下）
         nx.draw_networkx_nodes(G, pos, node_color='#F0F2F6', node_size=1800, edgecolors='gray', ax=ax)
+        
+        # 畫出原本的灰色一般道路
         nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='#D3D3D3', width=2, ax=ax)
         
-        # 將標籤換成中英對照，並調整字體大小與排版
-        nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_family='sans-serif', ax=ax)
+        # 用標準的 font_family 加上剛剛全域註冊好的中文字型畫上名字
+        nx.draw_networkx_labels(G, pos, labels=labels, font_size=10, font_family=font_family_name, ax=ax)
         
-        # 用顯眼的粗紅線畫出系統推薦的行走路線！
+        # 用顯眼的粗紅線把推薦路線覆蓋上去！
         nx.draw_networkx_edges(G, pos, edgelist=path_edges, edge_color='#FF4B4B', width=4.5, ax=ax)
         
-        # 美化外觀並顯示在 Streamlit 上
+        # 關閉 matplotlib 的數學座標軸，保持畫面乾淨
         ax.axis('off')
+        
+        # 把這張完美的圖渲染到 Streamlit 網頁上！
         st.pyplot(fig)
         
         # 顯示路線推薦
