@@ -325,27 +325,45 @@ if st.sidebar.button("開始計算最佳路線"):
         # ==========================================
         
         from matplotlib.patches import FancyArrowPatch
-
-        # 用來記錄已畫過的邊（避免重複判斷）
-        drawn = {}
+        import numpy as np
         
-        for i, (start, end) in enumerate(path_edges):
+        drawn = set()
+        
+        def offset_line(x1, y1, x2, y2, offset=0.08):
+            """把線段做垂直偏移，避免重疊"""
+            dx = x2 - x1
+            dy = y2 - y1
+        
+            length = np.sqrt(dx*dx + dy*dy)
+            if length == 0:
+                return x1, y1, x2, y2
+        
+            # 單位法向量（垂直方向）
+            nx = -dy / length
+            ny = dx / length
+        
+            return (
+                x1 + nx * offset,
+                y1 + ny * offset,
+                x2 + nx * offset,
+                y2 + ny * offset
+            )
+        
+        for start, end in path_edges:
+        
+            # 判斷方向（去 / 回）
+            if (end, start) in drawn:
+                color = 'blue'   # 回程
+                offset = -0.08
+            else:
+                color = 'red'    # 去程
+                offset = 0.08
         
             x1, y1 = pos[start]
             x2, y2 = pos[end]
         
-            # 判斷是不是反方向
-            key = (start, end)
-            reverse_key = (end, start)
-        
-            if reverse_key in drawn:
-                # 如果反向已經畫過 → 代表是「回程」
-                color = 'blue'
-                rad = -0.25
-            else:
-                # 去程
-                color = 'red'
-                rad = 0.25
+            # ⭐ 重點：平移線段，不用 curve
+            x1, y1, x2, y2 = offset_line(x1, y1, x2, y2, offset)
         
             arrow = FancyArrowPatch(
                 (x1, y1),
@@ -354,15 +372,14 @@ if st.sidebar.button("開始計算最佳路線"):
                 mutation_scale=20,
                 color=color,
                 linewidth=4,
-                shrinkA=25,
-                shrinkB=25,
-                connectionstyle=f"arc3,rad={rad}",
-                zorder=2
+                shrinkA=20,
+                shrinkB=20,
+                zorder=3
             )
         
             ax.add_patch(arrow)
         
-            drawn[key] = True
+            drawn.add((start, end))
         
         # ==========================================
         # 美化
