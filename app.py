@@ -324,24 +324,45 @@ if st.sidebar.button("開始計算最佳路線"):
         # 畫推薦路線（真正的箭頭）
         # ==========================================
         
-        for start, end in path_edges:
+        from matplotlib.patches import FancyArrowPatch
+
+        # 用來記錄已畫過的邊（避免重複判斷）
+        drawn = {}
+        
+        for i, (start, end) in enumerate(path_edges):
         
             x1, y1 = pos[start]
             x2, y2 = pos[end]
+        
+            # 判斷是不是反方向
+            key = (start, end)
+            reverse_key = (end, start)
+        
+            if reverse_key in drawn:
+                # 如果反向已經畫過 → 代表是「回程」
+                color = 'blue'
+                rad = -0.25
+            else:
+                # 去程
+                color = 'red'
+                rad = 0.25
         
             arrow = FancyArrowPatch(
                 (x1, y1),
                 (x2, y2),
                 arrowstyle='->',
                 mutation_scale=20,
-                color='red',
+                color=color,
                 linewidth=4,
                 shrinkA=25,
                 shrinkB=25,
-                zorder=1
+                connectionstyle=f"arc3,rad={rad}",
+                zorder=2
             )
         
             ax.add_patch(arrow)
+        
+            drawn[key] = True
         
         # ==========================================
         # 美化
