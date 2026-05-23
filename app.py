@@ -117,11 +117,27 @@ if st.sidebar.button("開始計算最佳路線"):
     
     if result:
         st.success("成功生成最佳計畫！")
-        # 假設 best_solution['path'] 拿到的格式是 ['V1', 'V3', 'V6', 'V3', 'V1']
+
+        # 顯示路線推薦
+        st.subheader("推薦遊園路線")
+        route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
+        st.info(route_display)
+        
+        # 顯示數據指標
+        st.subheader("行程數據統計")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("遊玩設施數量", f"{result['rides_count']} 個")
+        col2.metric("總偏好分數", f"{result['total_preference']} 分")
+        col3.metric("總花費時間", f"{result['total_time']} 分鐘")
+        
+        col4, col5, col6 = st.columns(3)
+        col4.metric("總花費金額", f"{result['total_cost']} 元")
+        col5.metric("體力消耗", f"{result['total_energy']} / {max_energy}")
+        col6.metric("累積曝曬指數", f"{result['total_sun']} / {max_sun}")
 
         recommended_path = result['path'] 
         
-        st.subheader("🗺️ 推薦遊園路線圖")
+        st.subheader("推薦遊園路線圖")
         
         # 1. 建立圖形結構 (對照表2的聯通關係)
         G = nx.Graph()
@@ -186,7 +202,6 @@ if st.sidebar.button("開始計算最佳路線"):
         # ==========================================
         # 🗺️ 繪製推薦路線地圖（改用強制字典指定字型）
         # ==========================================
-        st.subheader("🗺️ 推薦遊園路線圖")
         
         G = nx.Graph()
         edges = [
@@ -255,22 +270,7 @@ if st.sidebar.button("開始計算最佳路線"):
         # 渲染到網頁
         st.pyplot(fig)
                 
-        # 顯示路線推薦
-        st.subheader("推薦遊園路線")
-        route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
-        st.info(route_display)
         
-        # 顯示數據指標
-        st.subheader("行程數據統計")
-        col1, col2, col3 = st.columns(3)
-        col1.metric("遊玩設施數量", f"{result['rides_count']} 個")
-        col2.metric("總偏好分數", f"{result['total_preference']} 分")
-        col3.metric("總花費時間", f"{result['total_time']} 分鐘")
-        
-        col4, col5, col6 = st.columns(3)
-        col4.metric("總花費金額", f"{result['total_cost']} 元")
-        col5.metric("體力消耗", f"{result['total_energy']} / {max_energy}")
-        col6.metric("累積曝曬指數", f"{result['total_sun']} / {max_sun}")
     else:
         st.error("抱歉！在您指定的極限條件下，找不到任何一條可以回到入口的可行路線。請試著放寬限制（例如增加時間或預算）。")
 else:
