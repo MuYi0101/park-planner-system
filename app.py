@@ -328,15 +328,13 @@ if st.sidebar.button("開始計算最佳路線"):
             arrow = FancyArrowPatch(
                 (x1, y1),
                 (x2, y2),
-        
                 arrowstyle='->',
                 mutation_scale=20,
-        
                 color='red',
                 linewidth=4,
-        
                 shrinkA=25,
                 shrinkB=25
+                zorder=1
             )
         
             ax.add_patch(arrow)
