@@ -364,11 +364,11 @@ if st.sidebar.button("開始計算最佳路線"):
             # 判斷方向
             if pair in drawn_pairs:
                 # 回程
-                offset = -0.5  # 往基準向量的相反方向偏
+                offset = -0.05  # 往基準向量的相反方向偏
                 color = 'blue'
             else:
                 # 去程
-                offset = 0.5   # 往基準向量的相同方向偏
+                offset = 0.05   # 往基準向量的相同方向偏
                 color = 'red'
                 drawn_pairs.add(pair)
         
