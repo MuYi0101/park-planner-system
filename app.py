@@ -146,7 +146,7 @@ if st.sidebar.button("開始計算最佳路線"):
         
         # 畫出原本的所有設施與道路（灰色）
         nx.draw_networkx_nodes(G, pos, node_color='lightblue', node_size=700, ax=ax)
-        nx.draw_networkx_edges(G, pos, edgelist=edges, edgescolor='gray', width=1.5, ax=ax)
+        nx.draw_networkx_edges(G, pos, edgelist=edges, edge_color='gray', width=1.5, ax=ax)
         nx.draw_networkx_labels(G, pos, font_size=12, font_family='sans-serif', ax=ax)
         
         # 用顯眼的粗紅線畫出系統推薦的行走路線！
