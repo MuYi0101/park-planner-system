@@ -132,7 +132,7 @@ if st.sidebar.button("開始計算最佳路線"):
         st.subheader("🗺️ 樂園實景導覽地圖")
 
         # 假設 best_solution['path'] 拿到的格式是 ['V1', 'V3', 'V6', 'V3', 'V1']
-        recommended_path = best_solution['path'] 
+        recommended_path = result['path'] 
         
         st.subheader("🗺️ 推薦遊園路線圖")
         
