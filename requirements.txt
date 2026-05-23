@@ -1,5 +1,5 @@
 streamlit>=1.50.0
 pandas
 requests
-streamlit-folium
-folium
+networkx
+matplotlib
