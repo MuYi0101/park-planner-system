@@ -11,22 +11,24 @@ import numpy as np
 # ==========================================
 # 1. 定義地圖資料模型 (Data Model)
 # ==========================================
+# 偏好指數 Wp 已移除；曝曬指數 We_sun 已從路徑移至頂點（設施）
 vertices = {
-    'V1': {'name': '入口廣場', 'Wt': 0, 'Wc': 0, 'We': 0, 'Wp': 0},
-    'V2': {'name': '雲霄飛車', 'Wt': 15, 'Wc': 150, 'We': 8, 'Wp': 9},
-    'V3': {'name': '摩天輪',   'Wt': 20,  'Wc': 100, 'We': 2, 'Wp': 6},
-    'V4': {'name': '鬼屋',     'Wt': 25,  'Wc': 120, 'We': 6, 'Wp': 8},
-    'V5': {'name': '漂漂河',   'Wt': 30,  'Wc': 80,  'We': 4, 'Wp': 7},
-    'V6': {'name': '旋轉木馬', 'Wt': 10,  'Wc': 50,  'We': 1, 'Wp': 5}
+    'V1': {'name': '入口廣場', 'Wt': 0,  'Wc': 0,   'We': 0, 'We_sun': 0},
+    'V2': {'name': '雲霄飛車', 'Wt': 15, 'Wc': 150, 'We': 8, 'We_sun': 2},
+    'V3': {'name': '摩天輪',   'Wt': 20, 'Wc': 100, 'We': 2, 'We_sun': 4},
+    'V4': {'name': '鬼屋',     'Wt': 25, 'Wc': 120, 'We': 6, 'We_sun': 3},
+    'V5': {'name': '漂漂河',   'Wt': 30, 'Wc': 80,  'We': 4, 'We_sun': 2},
+    'V6': {'name': '旋轉木馬', 'Wt': 10, 'Wc': 50,  'We': 1, 'We_sun': 1}
 }
 
+# 圖結構：原本的 (鄰居, 路徑時間, 路徑曝曬) 改為 (鄰居, 路徑時間)
 graph = {
-    'V1': [('V2', 5, 2), ('V3', 4, 4)],
-    'V2': [('V1', 5, 2), ('V3', 6, 1), ('V4', 10, 3)],
-    'V3': [('V1', 4, 4), ('V2', 6, 1), ('V6', 8, 5)],
-    'V4': [('V2', 10, 3), ('V5', 5, 2), ('V6', 12, 4)],
-    'V5': [('V4', 5, 2), ('V6', 7, 1)],
-    'V6': [('V3', 8, 5), ('V4', 12, 4), ('V5', 7, 1)]
+    'V1': [('V2', 5), ('V3', 4)],
+    'V2': [('V1', 5), ('V3', 6), ('V4', 10)],
+    'V3': [('V1', 4), ('V2', 6), ('V6', 8)],
+    'V4': [('V2', 10), ('V5', 5), ('V6', 12)],
+    'V5': [('V4', 5), ('V6', 7)],
+    'V6': [('V3', 8), ('V4', 12), ('V5', 7)]
 }
 
 # ==========================================
@@ -37,20 +39,21 @@ class ParkPlanner:
         self.vertices = vertices
         self.graph = graph
         self.best_solution = None
-        self.best_metrics = [-1, -1, float('-inf'), float('-inf'), float('-inf')]
+        # 比較基準移除了偏好分數：[遊玩數, -時間, -費用, -曝曬]
+        self.best_metrics = [-1, float('-inf'), float('-inf'), float('-inf')]
         self.search_history = []  
         self.step_counter = 0     
 
     def solve(self, max_time, max_cost, max_energy, max_sun):
         self.best_solution = None
-        self.best_metrics = [-1, -1, float('-inf'), float('-inf'), float('-inf')]
+        self.best_metrics = [-1, float('-inf'), float('-inf'), float('-inf')]
         self.search_history = []  
         self.step_counter = 0     
         
-        self._dfs('V1', 0, 0, 0, 0, ['V1'], set(), 0, max_time, max_cost, max_energy, max_sun)
+        self._dfs('V1', 0, 0, 0, 0, ['V1'], set(), max_time, max_cost, max_energy, max_sun)
         return self.best_solution, self.search_history  
 
-    def _dfs(self, curr, t, c, e, s, path, visited_rides, pref, max_t, max_c, max_e, max_s):
+    def _dfs(self, curr, t, c, e, s, path, visited_rides, max_t, max_c, max_e, max_s):
         self.step_counter += 1
         
         is_pruned = t > max_t or c > max_c or e > max_e or s > max_s
@@ -70,6 +73,7 @@ class ParkPlanner:
             '遊玩數': len(visited_rides),
             '累積時間': t,
             '累積花費': c,
+            '累積曝曬': s,
             '狀態/結果': reason
         }
 
@@ -79,7 +83,8 @@ class ParkPlanner:
                 self.search_history.append(history_entry)
                 return
                 
-            current_metrics = [len(visited_rides), pref, -t, -c, -s]
+            # 評估指標移除了偏好分數
+            current_metrics = [len(visited_rides), -t, -c, -s]
             if current_metrics > self.best_metrics:
                 self.best_metrics = current_metrics
                 self.best_solution = {
@@ -88,7 +93,6 @@ class ParkPlanner:
                     'total_cost': c,
                     'total_energy': e,
                     'total_sun': s,
-                    'total_preference': pref,
                     'rides_count': len(visited_rides)
                 }
                 history_entry['狀態/結果'] = "🌟 找到更佳可行解！"
@@ -103,18 +107,17 @@ class ParkPlanner:
         if is_pruned:
             return
 
-        for neighbor, edge_t, edge_s in self.graph[curr]:
+        for neighbor, edge_t in self.graph[curr]:
             if neighbor != 'V1' and neighbor not in visited_rides:
                 v_info = self.vertices[neighbor]
                 new_t = t + edge_t + v_info['Wt']
                 new_c = c + v_info['Wc']
                 new_e = e + v_info['We']
-                new_s = s + edge_s
-                new_pref = pref + v_info['Wp']
+                new_s = s + v_info['We_sun']  # 曝曬指數改從設施節點 (頂點) 累加
                 
                 visited_rides.add(neighbor)
                 self._dfs(neighbor, new_t, new_c, new_e, new_s, 
-                          path + [neighbor], visited_rides, new_pref, 
+                          path + [neighbor], visited_rides, 
                           max_t, max_c, max_e, max_s)
                 visited_rides.remove(neighbor)
 
@@ -122,8 +125,9 @@ class ParkPlanner:
                 if neighbor != 'V1' and (neighbor not in visited_rides):
                     pass  
                 else:
-                    self._dfs(neighbor, t + edge_t, c, e, s + edge_s, 
-                              path + [neighbor], visited_rides, pref, 
+                    # 純經過節點不遊玩，不需要加頂點的曝曬指數
+                    self._dfs(neighbor, t + edge_t, c, e, s, 
+                              path + [neighbor], visited_rides, 
                               max_t, max_c, max_e, max_s)
 
 # ==========================================
@@ -159,15 +163,16 @@ def draw_park_map(result=None):
     fig, ax = plt.subplots(figsize=(12, 7))
     G = nx.DiGraph()
     
+    # 圖的邊只剩路徑時間成本 (wt)
     edges_with_weights = [
-        ('V1', 'V2', {'wt': 5,  'ws': 2}),
-        ('V1', 'V3', {'wt': 4,  'ws': 4}),
-        ('V2', 'V3', {'wt': 6,  'ws': 1}),
-        ('V2', 'V4', {'wt': 10, 'ws': 3}),
-        ('V3', 'V6', {'wt': 8,  'ws': 5}),
-        ('V4', 'V5', {'wt': 5,  'ws': 2}),
-        ('V4', 'V6', {'wt': 7,  'ws': 1}),
-        ('V5', 'V6', {'wt': 12, 'ws': 4})
+        ('V1', 'V2', {'wt': 5}),
+        ('V1', 'V3', {'wt': 4}),
+        ('V2', 'V3', {'wt': 6}),
+        ('V2', 'V4', {'wt': 10}),
+        ('V3', 'V6', {'wt': 8}),
+        ('V4', 'V5', {'wt': 5}),
+        ('V4', 'V6', {'wt': 7}),
+        ('V5', 'V6', {'wt': 12})
     ]
     G.add_edges_from(edges_with_weights)
     
@@ -180,14 +185,16 @@ def draw_park_map(result=None):
     nx.draw_networkx_nodes(G, pos, node_color='#F8F8F8', node_size=2500, edgecolors='gray', linewidths=2, ax=ax)
     nx.draw_networkx_edges(G, pos, edge_color='lightgray', width=2, arrows=False, ax=ax)
     
-    edge_labels = {(u, v): f"wt={data['wt']}\nws={data['ws']}" for u, v, data in G.edges(data=True)}
+    # 路徑上只標示移轉時間 wt
+    edge_labels = {(u, v): f"wt={data['wt']}" for u, v, data in G.edges(data=True)}
     edge_texts = nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=9, rotate=False, ax=ax)
     for text in edge_texts.values():
         text.set_zorder(10)
     
+    # 節點文字呈現：增加了 sun (頂點曝曬指數)，移除了 p (偏好指數)
     for node, (x, y) in pos.items():
         info = vertices[node]
-        node_text = f"{node}\n{info['name']}\n\n" f"t{info['Wt']}  " f"c{info['Wc']}  " f"e{info['We']}  " f"p{info['Wp']}"
+        node_text = f"{node}\n{info['name']}\n\n" f"t:{info['Wt']} " f"c:{info['Wc']} " f"e:{info['We']} " f"sun:{info['We_sun']}"
         ax.text(x, y, node_text, fontproperties=my_font, fontsize=10, ha='center', va='center', zorder=3)
     
     # 如果有計算結果，疊加推薦路線（紅色箭頭）
@@ -218,16 +225,16 @@ def draw_park_map(result=None):
 st.set_page_config(page_title="主題樂園最佳遊園計畫系統", layout="wide")
 st.title("演算法概論：主題樂園最佳遊園計畫系統 (第八組)")
 
-# 區塊一：遊園限制輸入區（改為可打字輸入的 number_input）
+# 區塊一：遊園限制輸入區
 st.subheader("🛠️ 設定您的遊園限制（請輸入數值）")
 with st.container():
     col_input1, col_input2, col_input3, col_input4 = st.columns(4)
     
-    # 使用 st.number_input 讓使用者可以直接打字
     max_time = col_input1.number_input("時間上限 (分鐘)", min_value=0, max_value=600, value=70, step=1)
     max_cost = col_input2.number_input("預算上限 (新台幣)", min_value=0, max_value=1000, value=300, step=1)
     max_energy = col_input3.number_input("體力上限 (1-30)", min_value=1, max_value=30, value=15, step=1)
-    max_sun = col_input4.number_input("可接受曝曬指數上限", min_value=1, max_value=30, value=15, step=1)
+    # 使用者可在此自由輸入可接受的曝曬值上限
+    max_sun = col_input4.number_input("可接受曝曬指數上限", min_value=0, max_value=50, value=10, step=1)
     
     # 開始計算按鈕
     start_calculation = st.button("🚀 開始計算最佳路線", use_container_width=True)
@@ -262,17 +269,16 @@ if calculated:
         route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
         st.info(route_display)
         
-        # 🟢 3. 顯示行程數據統計
+        # 🟢 3. 顯示行程數據統計（偏好分數指標已被移除）
         st.subheader("📊 行程數據統計")
         col1, col2, col3 = st.columns(3)
         col1.metric("遊玩設施數量", f"{result['rides_count']} 個")
-        col2.metric("總偏好分數", f"{result['total_preference']} 分")
-        col3.metric("總花費時間", f"{result['total_time']} 分鐘")
+        col2.metric("總花費時間", f"{result['total_time']} 分鐘")
+        col3.metric("總花費金額", f"{result['total_cost']} 元")
         
-        col4, col5, col6 = st.columns(3)
-        col4.metric("總花費金額", f"{result['total_cost']} 元")
-        col5.metric("體力消耗", f"{result['total_energy']} / {max_energy}")
-        col6.metric("累積曝曬指數", f"{result['total_sun']} / {max_sun}")
+        col4, col5 = st.columns(2)
+        col4.metric("體力消耗", f"{result['total_energy']} / {max_energy}")
+        col5.metric("累積設施曝曬指數", f"{result['total_sun']} / {max_sun}")
 
         # 🟢 4. 顯示演算法計算軌跡
         st.markdown("---")
@@ -292,6 +298,6 @@ if calculated:
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
             
     else:
-        st.error("抱歉！在您指定的極限條件下，找不到任何一條可以回到入口的可行路線。請試著放寬限制（例如增加時間或預算）。")
+        st.error("抱歉！在您指定的極限條件下，找不到任何一條可以回到入口的可行路線。請試著放寬限制（例如增加時間、預算或曝曬上限）。")
 else:
     st.info("💡 調整上方設定並點擊「開始計算最佳路線」按鈕，系統將在此地圖下方即時生成最推薦的客製化遊園行程數據與計算軌跡。")
