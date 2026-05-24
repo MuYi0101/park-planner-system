@@ -218,14 +218,16 @@ def draw_park_map(result=None):
 st.set_page_config(page_title="主題樂園最佳遊園計畫系統", layout="wide")
 st.title("演算法概論：主題樂園最佳遊園計畫系統 (第八組)")
 
-# 區塊一：遊園限制輸入區
-st.subheader("🛠️ 設定您的遊園限制")
+# 區塊一：遊園限制輸入區（改為可打字輸入的 number_input）
+st.subheader("🛠️ 設定您的遊園限制（請輸入數值）")
 with st.container():
     col_input1, col_input2, col_input3, col_input4 = st.columns(4)
-    max_time = col_input1.slider("時間上限 (分鐘)", 0, 600, 70)
-    max_cost = col_input2.slider("預算上限 (新台幣)", 0, 500, 300)
-    max_energy = col_input3.slider("體力上限 (1-30)", 1, 30, 15)
-    max_sun = col_input4.slider("可接受曝曬指數上限", 1, 30, 15)
+    
+    # 使用 st.number_input 讓使用者可以直接打字
+    max_time = col_input1.number_input("時間上限 (分鐘)", min_value=0, max_value=600, value=70, step=10)
+    max_cost = col_input2.number_input("預算上限 (新台幣)", min_value=0, max_value=1000, value=300, step=50)
+    max_energy = col_input3.number_input("體力上限 (1-30)", min_value=1, max_value=30, value=15, step=1)
+    max_sun = col_input4.number_input("可接受曝曬指數上限", min_value=1, max_value=30, value=15, step=1)
     
     # 開始計算按鈕
     start_calculation = st.button("🚀 開始計算最佳路線", use_container_width=True)
