@@ -225,7 +225,7 @@ with st.container():
     
     # 使用 st.number_input 讓使用者可以直接打字
     max_time = col_input1.number_input("時間上限 (分鐘)", min_value=0, max_value=600, value=70, step=1)
-    max_cost = col_input2.number_input("預算上限 (新台幣)", min_value=0, max_value=1000, value=300, step=5)
+    max_cost = col_input2.number_input("預算上限 (新台幣)", min_value=0, max_value=1000, value=300, step=1)
     max_energy = col_input3.number_input("體力上限 (1-30)", min_value=1, max_value=30, value=15, step=1)
     max_sun = col_input4.number_input("可接受曝曬指數上限", min_value=1, max_value=30, value=15, step=1)
     
