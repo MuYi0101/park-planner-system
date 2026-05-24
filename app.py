@@ -11,7 +11,6 @@ import numpy as np
 # ==========================================
 # 1. 定義地圖資料模型 (Data Model)
 # ==========================================
-# 偏好指數 Wp 已移除；曝曬指數 We_sun 已從路徑移至頂點（設施）
 vertices = {
     'V1': {'name': '入口廣場', 'Wt': 0,  'Wc': 0,   'We': 0, 'We_sun': 2},
     'V2': {'name': '雲霄飛車', 'Wt': 15, 'Wc': 150, 'We': 8, 'We_sun': 5},
@@ -83,7 +82,6 @@ class ParkPlanner:
                 self.search_history.append(history_entry)
                 return
                 
-            # 評估指標移除了偏好分數
             current_metrics = [len(visited_rides), -t, -c, -s]
             if current_metrics > self.best_metrics:
                 self.best_metrics = current_metrics
@@ -113,7 +111,7 @@ class ParkPlanner:
                 new_t = t + edge_t + v_info['Wt']
                 new_c = c + v_info['Wc']
                 new_e = e + v_info['We']
-                new_s = s + v_info['We_sun']  # 曝曬指數改從設施節點 (頂點) 累加
+                new_s = s + v_info['We_sun']  
                 
                 visited_rides.add(neighbor)
                 self._dfs(neighbor, new_t, new_c, new_e, new_s, 
@@ -125,7 +123,6 @@ class ParkPlanner:
                 if neighbor != 'V1' and (neighbor not in visited_rides):
                     pass  
                 else:
-                    # 純經過節點不遊玩，不需要加頂點的曝曬指數
                     self._dfs(neighbor, t + edge_t, c, e, s, 
                               path + [neighbor], visited_rides, 
                               max_t, max_c, max_e, max_s)
@@ -163,7 +160,6 @@ def draw_park_map(result=None):
     fig, ax = plt.subplots(figsize=(12, 7))
     G = nx.DiGraph()
     
-    # 圖的邊只剩路徑時間成本 (wt)
     edges_with_weights = [
         ('V1', 'V2', {'wt': 5}),
         ('V1', 'V3', {'wt': 4}),
@@ -185,13 +181,11 @@ def draw_park_map(result=None):
     nx.draw_networkx_nodes(G, pos, node_color='#F8F8F8', node_size=2500, edgecolors='gray', linewidths=2, ax=ax)
     nx.draw_networkx_edges(G, pos, edge_color='lightgray', width=2, arrows=False, ax=ax)
     
-    # 路徑上只標示移轉時間 wt
     edge_labels = {(u, v): f"wt={data['wt']}" for u, v, data in G.edges(data=True)}
     edge_texts = nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels, font_size=9, rotate=False, ax=ax)
     for text in edge_texts.values():
         text.set_zorder(10)
     
-    # 節點文字呈現：增加了 sun (頂點曝曬指數)，移除了 p (偏好指數)
     for node, (x, y) in pos.items():
         info = vertices[node]
         node_text = f"{node}\n{info['name']}\n\n" f"t:{info['Wt']} " f"c:{info['Wc']} " f"e:{info['We']} " f"sun:{info['We_sun']}"
@@ -233,7 +227,6 @@ with st.container():
     max_time = col_input1.number_input("時間上限 (分鐘)", min_value=0, max_value=600, value=70, step=1)
     max_cost = col_input2.number_input("預算上限 (新台幣)", min_value=0, max_value=1000, value=300, step=1)
     max_energy = col_input3.number_input("體力上限 (1-30)", min_value=1, max_value=30, value=15, step=1)
-    # 使用者可在此自由輸入可接受的曝曬值上限
     max_sun = col_input4.number_input("可接受曝曬指數上限", min_value=0, max_value=50, value=10, step=1)
     
     # 開始計算按鈕
@@ -269,7 +262,7 @@ if calculated:
         route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
         st.info(route_display)
         
-        # 🟢 3. 顯示行程數據統計（偏好分數指標已被移除）
+        # 🟢 3. 顯示行程數據統計
         st.subheader("📊 行程數據統計")
         col1, col2, col3 = st.columns(3)
         col1.metric("遊玩設施數量", f"{result['rides_count']} 個")
