@@ -38,7 +38,6 @@ class ParkPlanner:
         self.vertices = vertices
         self.graph = graph
         self.best_solution = None
-        # 比較基準移除了偏好分數：[遊玩數, -時間, -費用, -曝曬]
         self.best_metrics = [-1, float('-inf'), float('-inf'), float('-inf')]
         self.search_history = []  
         self.step_counter = 0     
@@ -220,7 +219,7 @@ st.set_page_config(page_title="主題樂園最佳遊園計畫系統", layout="wi
 st.title("演算法概論：主題樂園最佳遊園計畫系統 (第八組)")
 
 # 區塊一：遊園限制輸入區
-st.subheader("🛠️ 設定您的遊園限制（請輸入數值）")
+st.subheader("設定您的遊園限制（請輸入數值）")
 with st.container():
     col_input1, col_input2, col_input3, col_input4 = st.columns(4)
     
@@ -230,7 +229,7 @@ with st.container():
     max_sun = col_input4.number_input("可接受曝曬指數上限", min_value=0, max_value=50, value=10, step=1)
     
     # 開始計算按鈕
-    start_calculation = st.button("🚀 開始計算最佳路線", use_container_width=True)
+    start_calculation = st.button("開始計算最佳路線", use_container_width=True)
 
 st.markdown("---")
 
@@ -244,8 +243,8 @@ if start_calculation:
     result, history = planner.solve(max_time, max_cost, max_energy, max_sun)
     calculated = True
 
-# 🟢 1. 首先顯示地圖 (無論有沒有計算都要顯示)
-st.subheader("🗺️ 園區地圖與路線導覽")
+# 🟢 1. 地圖 
+st.subheader("園區地圖與路線導覽")
 if calculated and result:
     draw_park_map(result=result)  # 顯示帶有紅色軌跡的地圖
 else:
@@ -257,13 +256,13 @@ if calculated:
         st.success("成功生成最佳計畫！")
         st.markdown("---")
 
-        # 🟢 2. 顯示推薦路線
-        st.subheader("📍 推薦遊園路線")
+        # 2. 顯示推薦路線
+        st.subheader("推薦遊園路線")
         route_display = " ➔ ".join([f"**{vertices[node]['name']} ({node})**" for node in result['path']])
         st.info(route_display)
         
-        # 🟢 3. 顯示行程數據統計
-        st.subheader("📊 行程數據統計")
+        # 3. 顯示行程數據統計
+        st.subheader("行程數據統計")
         col1, col2, col3 = st.columns(3)
         col1.metric("遊玩設施數量", f"{result['rides_count']} 個")
         col2.metric("總花費時間", f"{result['total_time']} 分鐘")
@@ -273,9 +272,9 @@ if calculated:
         col4.metric("體力消耗", f"{result['total_energy']} / {max_energy}")
         col5.metric("累積設施曝曬指數", f"{result['total_sun']} / {max_sun}")
 
-        # 🟢 4. 顯示演算法計算軌跡
+        # 4. 顯示演算法計算軌跡
         st.markdown("---")
-        st.subheader("🧬 深度優先搜尋 (DFS) 演算法計算軌跡")
+        st.subheader("深度優先搜尋 (DFS) 演算法計算軌跡")
         
         with st.expander(f"點擊展開 / 摺疊詳細計算步驟 (全域共執行 {len(history)} 步走訪與剪枝)"):
             df_history = pd.DataFrame(history)
